@@ -6,8 +6,25 @@ using UnityEngine;
 public struct BiomePixel
 {
     public int ID;
-    public string biome_name;
+    public Biome biome;
     public Color colour;
+}
+
+public struct ImageInformation
+{
+    public Color[] image;
+    public int width;   
+    public int height;
+}
+
+public enum Biome
+{
+    Stone,
+    Surface,
+    Ice,
+    Desert,
+    Fire,
+    Wind
 }
 
 public class DrawCanvas : MonoBehaviour
@@ -39,8 +56,8 @@ public class DrawCanvas : MonoBehaviour
     /// </summary>
     private void GenerateSprite()
     {
+        Texture2D blank_texture = BlankTexture(texture_size, PixelFromID(0));
         sprite = GetComponent<SpriteRenderer>();
-        Texture2D blank_texture = BlankTexture(texture_size, PixelFromName("Stone"));
         sprite.sprite = Sprite.Create(blank_texture, 
             new Rect(0, 0, texture_size.x, texture_size.y), 
             new Vector2(0.5f, 0.5f), texture_pixels_per_unit);
@@ -127,10 +144,10 @@ public class DrawCanvas : MonoBehaviour
     /// </summary>
     /// <param name="name">String of input name</param>
     /// <returns>BiomePixel of pixel data</returns>
-    private BiomePixel PixelFromName(string name)
+    private BiomePixel PixelFromBiome(Biome biome)
     {
         foreach(BiomePixel pixel in biome_palette) 
-            if (pixel.biome_name == name) 
+            if (pixel.biome == biome) 
                 return pixel;
         return biome_palette[0];
     }
@@ -162,5 +179,33 @@ public class DrawCanvas : MonoBehaviour
         input_pos /= rect_size;
         Vector2Int pixel_pos = new Vector2Int((int)(input_pos.x * texture_size.x), (int)(input_pos.y * texture_size.y));
         return pixel_pos;
+    }
+
+    /// <summary>
+    /// Export image information on current canvas
+    /// </summary>
+    /// <returns>ImageInformation of image</returns>
+    public ImageInformation ExportImage()
+    {
+        Texture2D texture = sprite.sprite.texture;
+        ImageInformation info = new ImageInformation();
+        info.image = texture.GetPixels();
+        info.width = texture.width;
+        info.height = texture.height;
+        return info;
+    }
+
+    public Texture2D WFCToTexture(WFCOutput map)
+    {
+        Texture2D texture = new Texture2D(map.width, map.height);
+        texture.filterMode = FilterMode.Point;
+        Color[] pixels = new Color[map.width * map.height];
+        for(int i = 0; i < pixels.Length; i ++)
+        {
+            pixels[i] = PixelFromBiome(map.map[i]).colour;
+        }
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
     }
 }

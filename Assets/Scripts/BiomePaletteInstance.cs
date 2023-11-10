@@ -12,7 +12,7 @@ public class BiomePaletteInstance : MonoBehaviour
     public void GenerateInstance(BiomePixel pixel, DrawCanvas canvas)
     {
         colour_image.color = pixel.colour;
-        biome_text.text = pixel.biome_name;
+        biome_text.text = pixel.biome.ToString();
         select_button.onClick.AddListener(delegate { canvas.SetPalettePixel(pixel); });
     }
 }
