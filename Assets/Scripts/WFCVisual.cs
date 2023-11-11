@@ -12,7 +12,7 @@ public class WFCVisual : MonoBehaviour
 
     public void Awake()
     {
-        sprite = GetComponent<SpriteRenderer>();        
+        sprite = GetComponent<SpriteRenderer>();
     }
 
     public void Update()
