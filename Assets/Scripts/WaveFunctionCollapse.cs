@@ -41,6 +41,14 @@ public struct Rule
 {
     public bool wl_all;
     public BiomeWeight[] wl;
+    public Rule(bool all)
+    {
+        wl_all = all;
+        int biomeCount = System.Enum.GetValues(typeof(Biome)).Length;
+        wl = new BiomeWeight[biomeCount];
+        for (int i = 0; i < biomeCount; i++)
+            wl[i] = new BiomeWeight((Biome)i, 0);
+    }
 }
 
 [System.Serializable]
@@ -77,14 +85,15 @@ public class WaveFunctionCollapse : MonoBehaviour
             if (collapsed || options.Count <= 0)
                 return biome;
 
-            List<BiomeWeight> weights = new List<BiomeWeight>(options);
+            List<BiomeWeight> weights = new List<BiomeWeight>();
             float total_weight = 0;
-            for (int i = 0; i < weights.Count; i++)
+            for (int i = 0; i < options.Count; i++)
             {
-                BiomeWeight weight = weights[i];
+                BiomeWeight weight = options[i];
                 weight.impact *= WeightAtHeight(ruleset, weight.biome, perc_height);
                 total_weight += weight.impact;
-                weights[i] = weight;
+                if (weight.impact != 0)
+                    weights.Add(weight);
             }
             float rand_point = Random.Range(0, total_weight);
             int index = -1;
@@ -97,9 +106,17 @@ public class WaveFunctionCollapse : MonoBehaviour
                     break;
             }
 
-            if (index >= options.Count)
-                Debug.Log(index + " " + options.Count + " " + total_weight);
-            biome = options[index].biome;
+            index = Mathf.Clamp(index, 0, weights.Count-1);
+            if (weights.Count != 0)
+            {
+                biome = weights[index].biome;
+            }
+            else
+            {
+                Debug.LogWarning("No Valid Biomes For Collapsing");
+                biome = 0;
+            }
+
             collapsed = true;
             return biome;
         }
@@ -134,12 +151,12 @@ public class WaveFunctionCollapse : MonoBehaviour
     private bool generating;
     public bool loop_generating;
 
-    public IEnumerator GenerateWFC(Biome[] inp_map, Vector2Int size)
+    public IEnumerator GenerateWFC(Biome[] inp_map, Vector2Int in_size, Vector2Int out_size)
     {
         WFCInput input = new WFCInput();
-        input.ruleset = GenerateRuleset(inp_map);
-        input.width = size.x;
-        input.height = size.y;
+        input.ruleset = GenerateRuleset(inp_map, in_size);
+        input.width = out_size.x;
+        input.height = out_size.y;
         StartCoroutine(GenerateWFC(input));
         return null;
     }
@@ -237,11 +254,65 @@ public class WaveFunctionCollapse : MonoBehaviour
         return true;
     }
 
-    public static Ruleset GenerateRuleset(Biome[] inp_map)
+    public static Ruleset GenerateRuleset(Biome[] inp_map, Vector2Int size)
     {
-        Ruleset set = new Ruleset();
         // Make Ruleset based off inp_map
+        Ruleset set = new Ruleset();
+        set.rules = new List<Rules>();
+        set.height = new List<HeightVariance>();
+        int biome_count = System.Enum.GetValues(typeof(Biome)).Length;
+        for (int i = 0; i < biome_count; i++)
+        {
+            Rules _r = new Rules();
+            // Biome Rule
+            _r.biome = (Biome)i;
+            _r.left_rule = new Rule(false);
+            _r.right_rule = new Rule(false);
+            _r.up_rule = new Rule(false);
+            _r.down_rule = new Rule(false);
+            // Height Variance
+            HeightVariance _h = new HeightVariance();
+            _h.biome = (Biome)i;
+            _h.h_chance = new float[size.y];
+            // Go Through Each Cell And Calculate Both
+            for(int y = 0; y < size.y; y ++)
+            {
+                int counter = 0;
+                for (int x = 0; x < size.x; x++)
+                    if (inp_map[x + y * size.x] == (Biome)i)
+                    {
+                        counter++;
+                        if (x > 0)
+                        {
+                            _r.left_rule.wl[(int)inp_map[(x - 1) + y * size.x]].impact += 1;
+                        }
+                        if (x < size.x - 1)
+                        {
+                            _r.right_rule.wl[(int)inp_map[(x + 1) + y * size.x]].impact += 1;
+                        }
+                        if (y > 0)
+                        { 
+                            _r.down_rule.wl[(int)inp_map[x + (y - 1) * size.x]].impact += 1;
+                        }
+                        if (y < size.y - 1)
+                        {
+                            _r.up_rule.wl[(int)inp_map[x + (y + 1) * size.x]].impact += 1;
+                        }
+                    }
+                _h.h_chance[size.y - (y+1)] = counter;
+            }
+            set.rules.Add(_r);
+            set.height.Add(_h);
+        }
         return set;
+    }
+
+    private static int IndexOfBiomeweight(BiomeWeight[] w, Biome b)
+    {
+        for(int i = 0; i < w.Length; i ++)
+            if (w[i].biome == b)
+                return i;
+        return 0;
     }
 
     /// <summary>

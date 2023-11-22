@@ -10,6 +10,8 @@ public class WFCVisual : MonoBehaviour
     public Vector2Int size;
     public Ruleset default_ruleset;
 
+    public Ruleset test_ruleset;
+
     public void Awake()
     {
         sprite = GetComponent<SpriteRenderer>();
@@ -30,7 +32,8 @@ public class WFCVisual : MonoBehaviour
             Debug.LogError("Invalid WFC Output Size");
             return;
         }
-        wfc.GenerateWFC(default_ruleset, size);
+        wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
+        test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size);
     }
 
     private float PPU()

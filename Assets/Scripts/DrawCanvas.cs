@@ -152,6 +152,27 @@ public class DrawCanvas : MonoBehaviour
         return biome_palette[0];
     }
 
+    private Biome BiomeFromPixel(Color colour)
+    {
+        foreach (BiomePixel pixel in biome_palette)
+            if (SimilarColour(pixel.colour, colour))
+                return pixel.biome;
+        return 0;
+    }
+
+    private bool SimilarColour(Color a, Color b)
+    {
+        float variance = 0.01f;
+        if (a.r > b.r + variance || a.r < b.r - variance)
+            return false;
+        if (a.g > b.g + variance || a.g < b.g - variance)
+            return false;
+        if (a.b > b.b + variance || a.b < b.b - variance)
+            return false;
+        return true;
+
+    }
+
     /// <summary>
     /// Checks if given position is within bounds of rect
     /// </summary>
@@ -195,6 +216,21 @@ public class DrawCanvas : MonoBehaviour
         return info;
     }
 
+    public Biome[] TextureToBiomes(Texture2D texture)
+    {
+        texture.filterMode = FilterMode.Point;
+        Color[] pixels = texture.GetPixels();
+        Biome[] biome_map = new Biome[pixels.Length];
+        for (int i = 0; i < pixels.Length; i++)
+            biome_map[i] = BiomeFromPixel(pixels[i]);
+        return biome_map;
+    }
+
+    public Biome[] BiomeMap()
+    {
+        return TextureToBiomes(sprite.sprite.texture);
+    }
+
     public Texture2D WFCToTexture(WFCOutput map)
     {
         Texture2D texture = new Texture2D(map.width, map.height);
@@ -207,5 +243,10 @@ public class DrawCanvas : MonoBehaviour
         texture.SetPixels(pixels);
         texture.Apply();
         return texture;
+    }
+    
+    public void Reset()
+    {
+        GenerateSprite();
     }
 }
