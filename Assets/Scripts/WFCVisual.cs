@@ -1,15 +1,20 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class WFCVisual : MonoBehaviour
 {
-    private SpriteRenderer sprite;
+    // References
+    [Header("References")]
     public WaveFunctionCollapse wfc;
+    private SpriteRenderer sprite;
     public DrawCanvas canvas;
+    // Tweaks
+    [Header("Tweaking Variables")]
     public Vector2Int size;
+    // Tracking
+    private MapInfo last_map;
+    // Rules
+    [Header("Rulesets")]
     public Ruleset default_ruleset;
-
     public Ruleset test_ruleset;
 
     public void Awake()
@@ -19,12 +24,35 @@ public class WFCVisual : MonoBehaviour
 
     public void Update()
     {
-        if (wfc.cur_output.width != 0 && wfc.cur_output.height != 0)
-            sprite.sprite = Sprite.Create(canvas.WFCToTexture(wfc.cur_output),
-                new Rect(0, 0, size.x, size.y),
-                new Vector2(0.5f, 0.5f), PPU());
+        // Valid Output
+        if (ValidMap())
+        {
+            if (wfc.cur_output.map != last_map.map)
+            {
+                sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
+                    new Rect(0, 0, size.x, size.y),
+                    new Vector2(0.5f, 0.5f), PPU());
+                last_map = wfc.cur_output;
+            }
+        }
     }
 
+    /// <summary>
+    /// Checks if current map output is valid to display
+    /// </summary>
+    /// <returns>Bool if map is valid</returns>
+    private bool ValidMap()
+    {
+        if (wfc.cur_output.width == 0)
+            return false;
+        if (wfc.cur_output.height == 0)
+            return false;
+        return true;
+    }
+
+    /// <summary>
+    /// UI reference to generate WFC
+    /// </summary>
     public void GenWFC()
     {
         if (size.x <= 0 || size.y <= 0)
@@ -33,14 +61,40 @@ public class WFCVisual : MonoBehaviour
             return;
         }
         wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
-        test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size);
+        //wfc.GenerateWFC(default_ruleset, size);
+        //test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size);
     }
 
+    /// <summary>
+    /// Calculate pixels per unit (PPU)
+    /// </summary>
+    /// <returns>Float of pixels per unit</returns>
     private float PPU()
     {
         if (size.x > size.y)
             return size.x * 6 / 50f;
         else
             return size.y * 6 / 50f;
+    }
+
+    /// <summary>
+    /// UI reference to import WFC map
+    /// </summary>
+    public void Import()
+    {
+        SavedImage data = SaveSystem.LoadImageInfo("map");
+        if (data == null)
+            return;
+        wfc.cur_output = data.info;
+    }
+
+    /// <summary>
+    /// UI reference to export WFC map
+    /// </summary>
+    public void Export()
+    {
+        if (wfc.cur_output.width <= 0 || wfc.cur_output.height <= 0)
+            return;
+        SaveSystem.SaveImageInfo(wfc.cur_output, "map");
     }
 }
