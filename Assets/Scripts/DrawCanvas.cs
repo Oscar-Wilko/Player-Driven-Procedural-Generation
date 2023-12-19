@@ -34,6 +34,7 @@ public class DrawCanvas : MonoBehaviour
     [Header("References")]
     public RectTransform palette_transform;
     public GameObject palette_instance;
+    public Texture2D referenced_texture;
     private SpriteRenderer sprite;
     
     // Consts
@@ -41,6 +42,7 @@ public class DrawCanvas : MonoBehaviour
 
     // Balancing Variables
     [Header("Tweak Variables")]
+    public float reference_scaling;
     public float texture_pixels_per_unit;
     public Vector2Int texture_size;
     public BiomePixel[] biome_palette;
@@ -63,7 +65,7 @@ public class DrawCanvas : MonoBehaviour
         else if (Input.GetMouseButtonDown(1))
             FillAttempt(selected_pixel);
     }
-
+    #region Sprite Generation
     /// <summary>
     /// Create sprite of pixels to be drawn upon
     /// </summary>
@@ -74,7 +76,7 @@ public class DrawCanvas : MonoBehaviour
         sprite = GetComponent<SpriteRenderer>();
         sprite.sprite = Sprite.Create(blank_texture, 
             new Rect(0, 0, texture_size.x, texture_size.y), 
-            new Vector2(0.5f, 0.5f), texture_pixels_per_unit);
+            new Vector2(0.5f, 0.5f), PPU());
     }
 
     /// <summary>
@@ -109,7 +111,8 @@ public class DrawCanvas : MonoBehaviour
             instance.GetComponent<BiomePaletteInstance>().GenerateInstance(pixel, this);
         }
     }
-
+    #endregion
+    #region Tools
     /// <summary>
     /// Attempt to draw on canvas with given colour
     /// </summary>
@@ -141,7 +144,7 @@ public class DrawCanvas : MonoBehaviour
 
         sprite.sprite = Sprite.Create(base_texture, 
             new Rect(0, 0, texture_size.x, texture_size.y), 
-            new Vector2(0.5f, 0.5f), texture_pixels_per_unit);
+            new Vector2(0.5f, 0.5f), PPU());
     }
 
     /// <summary>
@@ -210,12 +213,10 @@ public class DrawCanvas : MonoBehaviour
 
         sprite.sprite = Sprite.Create(base_texture, 
             new Rect(0, 0, texture_size.x, texture_size.y), 
-            new Vector2(0.5f, 0.5f), texture_pixels_per_unit);
+            new Vector2(0.5f, 0.5f), PPU());
     }
-
-    public void SetPalettePixel(int ID) { selected_pixel = PixelFromID(ID); }
-    public void SetPalettePixel(BiomePixel pixel) { selected_pixel = pixel; }
-
+    #endregion
+    #region Biome Conversion
     /// <summary>
     /// Get biome pixel of certain ID
     /// </summary>
@@ -262,22 +263,8 @@ public class DrawCanvas : MonoBehaviour
         }
         return closest_biome;
     }
-
-    /// <summary>
-    /// Calculate variance between two colours
-    /// </summary>
-    /// <param name="a">Color of first colour to check</param>
-    /// <param name="b">Color of second colour to check</param>
-    /// <returns>Float of colour variance</returns>
-    private float ColorVariance(Color a, Color b)
-    {
-        float variance = 0;
-        variance += Mathf.Abs(a.r - b.r);
-        variance += Mathf.Abs(a.g - b.g);
-        variance += Mathf.Abs(a.b - b.b);
-        return variance;
-    }
-
+    #endregion
+    #region Calculations
     /// <summary>
     /// Checks if given position is within bounds of rect
     /// </summary>
@@ -285,11 +272,11 @@ public class DrawCanvas : MonoBehaviour
     /// <returns>Bool if within bounds</returns>
     private bool VecInRect(Vector2 pos)
     {
-        Vector2 rect_size = (Vector2)texture_size / texture_pixels_per_unit;
+        Vector2 rect_size = (Vector2)texture_size / PPU();
         if (pos.x > sprite.transform.position.x + rect_size.x * 0.5f
             || pos.x < sprite.transform.position.x - rect_size.x * 0.5f
             || pos.y > sprite.transform.position.y + rect_size.y * 0.5f
-            || pos.y < sprite.transform.position.y - rect_size.y * 0.5f) 
+            || pos.y < sprite.transform.position.y - rect_size.y * 0.5f)
             return false;
         return true;
     }
@@ -301,7 +288,7 @@ public class DrawCanvas : MonoBehaviour
     /// <returns>Vector2Int of pixel position</returns>
     private Vector2Int GetPixelPosition(Vector2 pos)
     {
-        Vector2 rect_size = (Vector2)texture_size / texture_pixels_per_unit;
+        Vector2 rect_size = (Vector2)texture_size / PPU();
         Vector2 input_pos = pos - (new Vector2(sprite.transform.position.x, sprite.transform.position.y) - rect_size * 0.5f);
         input_pos /= rect_size;
         Vector2Int pixel_pos = new Vector2Int((int)(input_pos.x * texture_size.x), (int)(input_pos.y * texture_size.y));
@@ -309,35 +296,32 @@ public class DrawCanvas : MonoBehaviour
     }
 
     /// <summary>
-    /// Export image information on current canvas
+    /// Calculate variance between two colours
     /// </summary>
-    /// <returns>ImageInformation of image</returns>
-    public MapInfo ExportImage()
+    /// <param name="a">Color of first colour to check</param>
+    /// <param name="b">Color of second colour to check</param>
+    /// <returns>Float of colour variance</returns>
+    private static float ColorVariance(Color a, Color b)
     {
-        Texture2D texture = sprite.sprite.texture;
-        MapInfo info = new MapInfo();
-        info.map = current_map;
-        info.width = texture.width;
-        info.height = texture.height;
-        return info;
+        float variance = 0;
+        variance += Mathf.Abs(a.r - b.r);
+        variance += Mathf.Abs(a.g - b.g);
+        variance += Mathf.Abs(a.b - b.b);
+        return variance;
     }
 
     /// <summary>
-    /// Import map info onto canvas
+    /// Get texture pixels per unit value
     /// </summary>
-    /// <param name="info">MapInfo of imported map information</param>
-    public void ImportImage(MapInfo info)
+    /// <returns>Float of pixels per unit</returns>
+    private float PPU()
     {
-        current_map = info.map;
-        Texture2D texture = new Texture2D(info.width, info.height);
-        texture.filterMode = FilterMode.Point;
-        texture.SetPixels(MapToColours(info.map));
-        texture.Apply();
-        sprite.sprite = Sprite.Create(texture,
-            new Rect(0, 0, texture_size.x, texture_size.y),
-            new Vector2(0.5f, 0.5f), texture_pixels_per_unit); ;
+        float x_ratio = texture_size.x * (3f / 16);
+        float y_ratio = texture_size.y * (3f / 16);
+        return Mathf.Max(x_ratio, y_ratio);
     }
-
+    #endregion
+    #region Map Conversion
     /// <summary>
     /// Convert texture into biome map
     /// </summary>
@@ -353,7 +337,6 @@ public class DrawCanvas : MonoBehaviour
         return biome_map;
     }
 
-    public Biome[] BiomeMap() { return current_map; }
 
     /// <summary>
     /// Convert biome map into colour map
@@ -382,7 +365,61 @@ public class DrawCanvas : MonoBehaviour
         texture.Apply();
         return texture;
     }
-    
+    #endregion
+    #region Exports & Imports
+    /// <summary>
+    /// Export image information on current canvas
+    /// </summary>
+    /// <returns>ImageInformation of image</returns>
+    public MapInfo ExportImage()
+    {
+        Texture2D texture = sprite.sprite.texture;
+        MapInfo info = new MapInfo();
+        info.map = current_map;
+        info.width = texture.width;
+        info.height = texture.height;
+        return info;
+    }
+
+    /// <summary>
+    /// Import map info onto canvas
+    /// </summary>
+    /// <param name="info">MapInfo of imported map information</param>
+    public void ImportImage(MapInfo info)
+    {
+        current_map = info.map;
+        texture_size = new Vector2Int(info.width, info.height);
+        Texture2D texture = new Texture2D(info.width, info.height);
+        texture.filterMode = FilterMode.Point;
+        texture.SetPixels(MapToColours(info.map));
+        texture.Apply();
+        sprite.sprite = Sprite.Create(texture,
+            new Rect(0, 0, info.width, info.height),
+            new Vector2(0.5f, 0.5f), PPU());
+    }
+
+    /// <summary>
+    /// Import texture onto canvas
+    /// </summary>
+    /// <param name="texture">Texture2D of imported texture</param>
+    public void ImportTexture(Texture2D texture)
+    {
+        current_map = TextureToBiomes(texture);
+        texture_size = new Vector2Int(texture.width, texture.height);
+        Texture2D n_texture = new Texture2D(texture.width, texture.height);
+        n_texture.filterMode = FilterMode.Point;
+        n_texture.SetPixels(MapToColours(current_map));
+        n_texture.Apply();
+        sprite.sprite = Sprite.Create(n_texture,
+            new Rect(0, 0, n_texture.width, n_texture.height),
+            new Vector2(0.5f, 0.5f), PPU());
+    }
+    #endregion
+    #region Quick Functions
+    public void SetPalettePixel(int ID) { selected_pixel = PixelFromID(ID); }
+    public void SetPalettePixel(BiomePixel pixel) { selected_pixel = pixel; }
+    public Biome[] BiomeMap() { return current_map; }
+
     /// <summary>
     /// Reset to default
     /// </summary>
@@ -409,4 +446,13 @@ public class DrawCanvas : MonoBehaviour
             return;
         ImportImage(data.info);
     }
+
+    /// <summary>
+    /// Load texture onto canvas
+    /// </summary>
+    public void LoadTexture()
+    {
+        ImportTexture(referenced_texture);
+    }
+    #endregion
 }

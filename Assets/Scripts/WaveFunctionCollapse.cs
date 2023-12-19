@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+#region Structs
 public struct WFCInput
 {
     public Ruleset ruleset;
@@ -68,87 +69,9 @@ public struct LengthVariance
     public Biome biome;
     public float[] l_chance;
 }
-
+#endregion
 public class WaveFunctionCollapse : MonoBehaviour
 {
-    public class Cell
-    {
-        public bool collapsed = false;
-        public Biome biome;
-        public List<BiomeWeight> options;
-        public int index;
-        public float perc_height;
-        public float perc_length;
-
-        /// <summary>
-        /// Collapse self by checking current options with ruleset
-        /// </summary>
-        /// <param name="ruleset">Ruleset dictating biomes interactions</param>
-        /// <returns>Biome of selected biome to collapse to</returns>
-        public Biome Collapse(Ruleset ruleset)
-        {
-            if (collapsed || options.Count <= 0)
-                return biome;
-
-            List<BiomeWeight> weights = new List<BiomeWeight>();
-            float total_weight = 0;
-            for (int i = 0; i < options.Count; i++)
-            {
-                BiomeWeight weight = options[i];
-                weight.impact *= WeightAtHeight(ruleset, weight.biome, perc_height);
-                weight.impact *= WeightAtLength(ruleset, weight.biome, perc_length);
-                total_weight += weight.impact;
-                if (weight.impact != 0)
-                    weights.Add(weight);
-            }
-            float rand_point = Random.Range(0, total_weight);
-            int index = -1;
-            foreach (BiomeWeight w in weights)
-            {
-                index++;
-                if (w.impact < rand_point)
-                    rand_point -= w.impact;
-                else if (w.impact >= rand_point)
-                    break;
-            }
-
-            index = Mathf.Clamp(index, 0, weights.Count-1);
-            if (weights.Count != 0)
-            {
-                biome = weights[index].biome;
-            }
-            else
-            {
-                Debug.LogWarning("No Valid Biomes For Collapsing");
-                biome = 0;
-            }
-            collapsed = true;
-            return biome;
-        }
-
-        /// <summary>
-        /// Refresh self with new surrounding cells
-        /// </summary>
-        /// <param name="rule">Rule of specific rule of neighbouring cell</param>
-        public void Update(Rule rule)
-        {
-            if (collapsed || options.Count <= 0 || rule.wl_all)
-                return;
-            List<BiomeWeight> new_options = new List<BiomeWeight>();
-            foreach (BiomeWeight option in options)
-                foreach (BiomeWeight w in rule.wl)
-                    if (w.biome == option.biome)
-                    {
-                        BiomeWeight new_w = option;
-                        new_w.impact *= w.impact;
-                        new_options.Add(new_w);
-                        break;
-                    }
-            options = new_options;
-            if (options.Count == 0)
-                Debug.LogError("No more options");
-        }
-    }
     // Tweaks
     [Header("Tweaking Variables")]
     public bool frame_by_frame;
@@ -158,6 +81,7 @@ public class WaveFunctionCollapse : MonoBehaviour
     public MapInfo cur_output;
     private bool generating;
 
+    #region WFC Generation
     /// <summary>
     /// Generate biome map with Wave Function Collapse
     /// </summary>
@@ -187,10 +111,7 @@ public class WaveFunctionCollapse : MonoBehaviour
         generating = true;
         // Time Trackers
         float t = Time.realtimeSinceStartup;
-        float t_pre;
-        float t_col = 0;
-        float t_ent = 0;
-        float t_upd = 0;
+        float t_pre, t_col = 0, t_ent = 0, t_upd = 0;
         // Initialise WFC Output
         MapInfo wfc = new MapInfo();
         wfc.map = new Biome[inp.width * inp.height];
@@ -198,30 +119,16 @@ public class WaveFunctionCollapse : MonoBehaviour
         wfc.height = inp.height;
 
         // Initialise cells with default weighting
-        List<BiomeWeight> init_options = new List<BiomeWeight>();
-        for (int i = 0; i < System.Enum.GetValues(typeof(Biome)).Length; i++)
-            init_options.Add(new BiomeWeight((Biome)i, 1));
-        Cell[] cells = new Cell[inp.width * inp.height];
-        for (int i = 0; i < cells.Length; i++)
-        {
-            cells[i] = new Cell();
-            cells[i].options = init_options;
-            cells[i].index = i;
-            cells[i].perc_height = (i / inp.width) / (float)inp.height;
-            cells[i].perc_length = (i % inp.width) / (float)inp.width;
-        }
+        Cell[] cells = InitCells(inp);
 
         int max_passes = inp.width * inp.height;
         int pass = 0;
-        Cell low_e;
-        Rules cur_rules;
-        Vector2Int g_pos;
         // Loop until finished collapsing or reaching max passes
         while (!FinishCheck(cells) && pass < max_passes)
         {
             // Find Cell of lowest entropy
             t_pre = Time.realtimeSinceStartup;
-            low_e = LowestEntropy(cells);
+            Cell low_e = LowestEntropy(cells);
             t_ent += Time.realtimeSinceStartup - t_pre;
 
             // Collapse Cell
@@ -231,8 +138,8 @@ public class WaveFunctionCollapse : MonoBehaviour
 
             // Update neighbouring cells
             t_pre = Time.realtimeSinceStartup;
-            g_pos = new Vector2Int(low_e.index % inp.width, low_e.index / inp.width);
-            cur_rules = RulesOfBiome(inp.ruleset, low_e.biome);
+            Vector2Int g_pos = new Vector2Int(low_e.index % inp.width, low_e.index / inp.width);
+            Rules cur_rules = RulesOfBiome(inp.ruleset, low_e.biome);
             if (g_pos.x > 0)            cells[low_e.index - 1].Update(cur_rules.left_rule);
             if (g_pos.x < inp.width-1)  cells[low_e.index + 1].Update(cur_rules.right_rule);
             if (g_pos.y > 0)            cells[low_e.index - inp.width].Update(cur_rules.down_rule);
@@ -270,20 +177,8 @@ public class WaveFunctionCollapse : MonoBehaviour
             generating = false;
         }
     }
-
-    /// <summary>
-    /// Checks if all cells have collapsed, a.k.a. finished
-    /// </summary>
-    /// <param name="cells">Cell[] of all cells to check</param>
-    /// <returns>Bool if all cells collapsed</returns>
-    private static bool FinishCheck(Cell[] cells)
-    {
-        foreach(Cell cell in cells)
-            if (!cell.collapsed)
-                return false;
-        return true;
-    }
-
+    #endregion
+    #region Calculations & Generations
     /// <summary>
     /// Generate a ruleset based on an inputted biome map
     /// </summary>
@@ -345,6 +240,41 @@ public class WaveFunctionCollapse : MonoBehaviour
     }
 
     /// <summary>
+    /// Initialise cell array with inp size
+    /// </summary>
+    /// <param name="inp">WFCInput for cell size</param>
+    /// <returns>Cell[] of initialised cells</returns>
+    public static Cell[] InitCells(WFCInput inp)
+    {
+        List<BiomeWeight> init_options = new List<BiomeWeight>();
+        for (int i = 0; i < System.Enum.GetValues(typeof(Biome)).Length; i++)
+            init_options.Add(new BiomeWeight((Biome)i, 1));
+        Cell[] cells = new Cell[inp.width * inp.height];
+        for (int i = 0; i < cells.Length; i++)
+        {
+            cells[i] = new Cell();
+            cells[i].options = init_options;
+            cells[i].index = i;
+            cells[i].perc_height = (i / inp.width) / (float)inp.height;
+            cells[i].perc_length = (i % inp.width) / (float)inp.width;
+        }
+        return cells;
+    }
+
+    /// <summary>
+    /// Checks if all cells have collapsed, a.k.a. finished
+    /// </summary>
+    /// <param name="cells">Cell[] of all cells to check</param>
+    /// <returns>Bool if all cells collapsed</returns>
+    private static bool FinishCheck(Cell[] cells)
+    {
+        foreach (Cell cell in cells)
+            if (!cell.collapsed)
+                return false;
+        return true;
+    }
+
+    /// <summary>
     /// Calculate which cell has the lowest entropy
     /// </summary>
     /// <param name="cells">Cell[] of all cells to check</param>
@@ -372,7 +302,8 @@ public class WaveFunctionCollapse : MonoBehaviour
         int randomIndex = indexes[Random.Range(0, indexes.Count)];
         return cells[randomIndex];
     }
-
+    #endregion
+    #region Value Fetching
     /// <summary>
     /// Return the rules of a specific biome from a ruleset
     /// </summary>
@@ -424,4 +355,5 @@ public class WaveFunctionCollapse : MonoBehaviour
             }
         return 0;
     }
+    #endregion
 }
