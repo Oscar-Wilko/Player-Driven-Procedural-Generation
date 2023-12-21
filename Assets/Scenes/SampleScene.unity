@@ -822,8 +822,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3687ec4acb70eb049a9c1f47282ade43, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  frame_by_frame: 0
+  frame_by_frame: 1
+  frames_per_update: 1
   loop_generating: 0
+  output_stats: 1
   cur_output:
     map: 
     width: 0
@@ -2379,23 +2381,26 @@ MonoBehaviour:
   texture_size: {x: 16, y: 16}
   biome_palette:
   - ID: 0
-    biome: 1
-    colour: {r: 0, g: 1, b: 0.14216971, a: 1}
-  - ID: 1
-    biome: 2
-    colour: {r: 0, g: 1, b: 0.9604409, a: 1}
-  - ID: 2
-    biome: 3
-    colour: {r: 1, g: 0.9118242, b: 0, a: 1}
-  - ID: 3
-    biome: 4
-    colour: {r: 1, g: 0, b: 0, a: 1}
-  - ID: 4
-    biome: 5
-    colour: {r: 0.7146226, g: 0.9528302, b: 0.90563065, a: 1}
-  - ID: 5
     biome: 0
-    colour: {r: 0.5380028, g: 0.5849056, b: 0.5756788, a: 1}
+    colour: {r: 1, g: 1, b: 1, a: 0.49019608}
+  - ID: 1
+    biome: 1
+    colour: {r: 0.5377358, g: 0.5377358, b: 0.5377358, a: 1}
+  - ID: 2
+    biome: 2
+    colour: {r: 0, g: 1, b: 0.14216971, a: 1}
+  - ID: 3
+    biome: 3
+    colour: {r: 0, g: 1, b: 0.9604409, a: 1}
+  - ID: 4
+    biome: 4
+    colour: {r: 1, g: 0.9118242, b: 0, a: 1}
+  - ID: 5
+    biome: 5
+    colour: {r: 1, g: 0, b: 0, a: 1}
+  - ID: 6
+    biome: 6
+    colour: {r: 0.7146226, g: 0.9528302, b: 0.90563065, a: 1}
 --- !u!1 &1027077423
 GameObject:
   m_ObjectHideFlags: 0
@@ -2904,7 +2909,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   wfc: {fileID: 213189642}
   canvas: {fileID: 1023291916}
-  size: {x: 200, y: 100}
+  size: {x: 64, y: 64}
   default_ruleset:
     rules:
     - biome: 0

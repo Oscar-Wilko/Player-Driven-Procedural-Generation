@@ -2,32 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
-public struct BiomePixel
-{
-    public int ID;
-    public Biome biome;
-    public Color colour;
-}
-
-[System.Serializable]
-public struct MapInfo
-{
-    public Biome[] map;
-    public int width;   
-    public int height;
-}
-
-public enum Biome
-{
-    Stone,
-    Surface,
-    Ice,
-    Desert,
-    Fire,
-    Wind
-}
-
 public class DrawCanvas : MonoBehaviour
 {
     // Refs

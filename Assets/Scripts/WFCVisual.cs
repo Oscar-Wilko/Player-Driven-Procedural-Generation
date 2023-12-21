@@ -11,7 +11,7 @@ public class WFCVisual : MonoBehaviour
     [Header("Tweaking Variables")]
     public Vector2Int size;
     // Tracking
-    private MapInfo last_map;
+    private Biome[] last_map;
     // Rules
     [Header("Rulesets")]
     public Ruleset default_ruleset;
@@ -27,13 +27,9 @@ public class WFCVisual : MonoBehaviour
         // Valid Output
         if (ValidMap())
         {
-            if (wfc.cur_output.map != last_map.map)
-            {
-                sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
-                    new Rect(0, 0, size.x, size.y),
-                    new Vector2(0.5f, 0.5f), PPU());
-                last_map = wfc.cur_output;
-            }
+            sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
+                new Rect(0, 0, size.x, size.y),
+                new Vector2(0.5f, 0.5f), PPU());
         }
     }
 
@@ -43,9 +39,8 @@ public class WFCVisual : MonoBehaviour
     /// <returns>Bool if map is valid</returns>
     private bool ValidMap()
     {
-        if (wfc.cur_output.width == 0)
-            return false;
-        if (wfc.cur_output.height == 0)
+        if (wfc.cur_output.width == 0 ||
+            wfc.cur_output.height == 0)
             return false;
         return true;
     }
@@ -62,7 +57,7 @@ public class WFCVisual : MonoBehaviour
         }
         wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
         //wfc.GenerateWFC(default_ruleset, size);
-        //test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size);
+        test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size, false);
     }
 
     /// <summary>
@@ -71,10 +66,7 @@ public class WFCVisual : MonoBehaviour
     /// <returns>Float of pixels per unit</returns>
     private float PPU()
     {
-        if (size.x > size.y)
-            return size.x * 6 / 50f;
-        else
-            return size.y * 6 / 50f;
+        return Mathf.Max(size.x, size.y) * (0.12f);
     }
 
     /// <summary>

@@ -2,80 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-#region Structs
-public struct WFCInput
-{
-    public Ruleset ruleset;
-    public int width;
-    public int height;
-}
-
-[System.Serializable]
-public struct Ruleset
-{
-    public List<Rules> rules;
-    public List<HeightVariance> height;
-    public List<LengthVariance> length;
-}
-
-[System.Serializable]
-public struct Rules
-{
-    public Biome biome;
-    // WL => Whitelist
-    public Rule up_rule;
-    public Rule right_rule;
-    public Rule down_rule;
-    public Rule left_rule;
-}
-
-[System.Serializable]
-public struct Rule
-{
-    public bool wl_all;
-    public BiomeWeight[] wl;
-    public Rule(bool all)
-    {
-        wl_all = all;
-        int biomeCount = System.Enum.GetValues(typeof(Biome)).Length;
-        wl = new BiomeWeight[biomeCount];
-        for (int i = 0; i < biomeCount; i++)
-            wl[i] = new BiomeWeight((Biome)i, 0);
-    }
-}
-
-[System.Serializable]
-public struct BiomeWeight
-{ 
-    public BiomeWeight(Biome b, float i)
-    {
-        biome = b;
-        impact = i;
-    }
-    public Biome biome;
-    public float impact;
-}
-
-[System.Serializable]
-public struct HeightVariance
-{
-    public Biome biome;
-    public float[] h_chance;
-}
-
-[System.Serializable]
-public struct LengthVariance
-{
-    public Biome biome;
-    public float[] l_chance;
-}
-#endregion
 public class WaveFunctionCollapse : MonoBehaviour
 {
     // Tweaks
     [Header("Tweaking Variables")]
     public bool frame_by_frame;
+    public int frames_per_update;
     public bool loop_generating;
+    public bool output_stats;
     // Trackers
     [Header("Trackers")]
     public MapInfo cur_output;
@@ -92,7 +26,7 @@ public class WaveFunctionCollapse : MonoBehaviour
     public IEnumerator GenerateWFC(Biome[] inp_map, Vector2Int in_size, Vector2Int out_size)
     {
         WFCInput input = new WFCInput();
-        input.ruleset = GenerateRuleset(inp_map, in_size);
+        input.ruleset = GenerateRuleset(inp_map, in_size, output_stats);
         input.width = out_size.x;
         input.height = out_size.y;
         StartCoroutine(GenerateWFC(input));
@@ -123,27 +57,102 @@ public class WaveFunctionCollapse : MonoBehaviour
 
         int max_passes = inp.width * inp.height;
         int pass = 0;
+        List<Cell> lowest_entropy = new List<Cell>();
         // Loop until finished collapsing or reaching max passes
         while (!FinishCheck(cells) && pass < max_passes)
         {
             // Find Cell of lowest entropy
             t_pre = Time.realtimeSinceStartup;
-            Cell low_e = LowestEntropy(cells);
+            Cell low_e = LowestEntropy(cells, lowest_entropy);
             t_ent += Time.realtimeSinceStartup - t_pre;
 
             // Collapse Cell
             t_pre = Time.realtimeSinceStartup;
             low_e.Collapse(inp.ruleset);
+            lowest_entropy.Remove(low_e);
             t_col += Time.realtimeSinceStartup - t_pre;
 
             // Update neighbouring cells
             t_pre = Time.realtimeSinceStartup;
             Vector2Int g_pos = new Vector2Int(low_e.index % inp.width, low_e.index / inp.width);
             Rules cur_rules = RulesOfBiome(inp.ruleset, low_e.biome);
-            if (g_pos.x > 0)            cells[low_e.index - 1].Update(cur_rules.left_rule);
-            if (g_pos.x < inp.width-1)  cells[low_e.index + 1].Update(cur_rules.right_rule);
-            if (g_pos.y > 0)            cells[low_e.index - inp.width].Update(cur_rules.down_rule);
-            if (g_pos.y < inp.height-1) cells[low_e.index + inp.width].Update(cur_rules.up_rule);
+            float ent;
+            // Left Cell
+            if (g_pos.x > 0)
+            {
+                if (!cells[low_e.index - 1].collapsed)
+                {
+                    cells[low_e.index - 1].Update(cur_rules.left_rule);
+                    ent = cells[low_e.index - 1].options.Count;
+                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
+                    { 
+                        if (!lowest_entropy.Contains(cells[low_e.index - 1]))
+                            lowest_entropy.Add(cells[low_e.index - 1]);
+                    }
+                    else if (ent < lowest_entropy[0].options.Count)
+                    {
+                        lowest_entropy.Clear();
+                        lowest_entropy.Add(cells[low_e.index - 1]);
+                    }
+                }
+            }
+            // Right Cell
+            if (g_pos.x < inp.width - 1)
+            {
+                if (!cells[low_e.index + 1].collapsed)
+                {
+                    cells[low_e.index + 1].Update(cur_rules.right_rule);
+                    ent = cells[low_e.index + 1].options.Count;
+                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
+                    {
+                        if (!lowest_entropy.Contains(cells[low_e.index + 1]))
+                            lowest_entropy.Add(cells[low_e.index + 1]);
+                    }
+                    else if (ent < lowest_entropy[0].options.Count)
+                    {
+                        lowest_entropy.Clear();
+                        lowest_entropy.Add(cells[low_e.index + 1]);
+                    }
+                }
+            }
+            // Below Cell
+            if (g_pos.y > 0)
+            {
+                if (!cells[low_e.index - inp.width].collapsed)
+                {
+                    cells[low_e.index - inp.width].Update(cur_rules.down_rule);
+                    ent = cells[low_e.index - inp.width].options.Count;
+                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
+                    {
+                        if (!lowest_entropy.Contains(cells[low_e.index - inp.width]))
+                            lowest_entropy.Add(cells[low_e.index - inp.width]);
+                    }
+                    else if (ent < lowest_entropy[0].options.Count)
+                    {
+                        lowest_entropy.Clear();
+                        lowest_entropy.Add(cells[low_e.index - inp.width]);
+                    }
+                }
+            }
+            // Above Cell
+            if (g_pos.y < inp.height - 1)
+            {
+                if (!cells[low_e.index + inp.width].collapsed)
+                {
+                    cells[low_e.index + inp.width].Update(cur_rules.up_rule);
+                    ent = cells[low_e.index + inp.width].options.Count;
+                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
+                    {
+                        if (!lowest_entropy.Contains(cells[low_e.index + inp.width]))
+                            lowest_entropy.Add(cells[low_e.index + inp.width]);
+                    }
+                    else if (ent < lowest_entropy[0].options.Count)
+                    {
+                        lowest_entropy.Clear();
+                        lowest_entropy.Add(cells[low_e.index + inp.width]);
+                    }
+                }
+            }
             t_upd += Time.realtimeSinceStartup - t_pre;
 
             pass++;
@@ -153,19 +162,22 @@ public class WaveFunctionCollapse : MonoBehaviour
                 for (int i = 0; i < cells.Length; i++)
                     wfc.map[i] = cells[i].biome;
                 cur_output = wfc;
-                yield return new WaitForEndOfFrame();
+                if (frames_per_update > 0)
+                    if (pass % frames_per_update == 0)
+                        yield return new WaitForEndOfFrame();
             }
         }
+        Debug.Log("Finished");
 
-        for(int i = 0; i < cells.Length; i++)
+        for (int i = 0; i < cells.Length; i++)
             wfc.map[i] = cells[i].biome;
         cur_output = wfc;
 
-        if (!frame_by_frame)
-        {
-            Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the WFC biome map.");
-            Debug.Log("Updates took " + t_upd + " seconds. Collapses took " + t_col + " seconds. Entropy took " + t_ent + " seconds.");
-        }
+        if (!frame_by_frame && output_stats)
+            Debug.Log(
+                "It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the WFC biome map.\n" +
+                "Updates took " + t_upd + " seconds. Collapses took " + t_col + " seconds. Entropy took " + t_ent + " seconds.");
+
         if (loop_generating)
         {
             yield return new WaitForEndOfFrame();
@@ -185,7 +197,7 @@ public class WaveFunctionCollapse : MonoBehaviour
     /// <param name="inp_map">Biome[] map of biomes</param>
     /// <param name="size">Vector2Int of inputted map size</param>
     /// <returns></returns>
-    public static Ruleset GenerateRuleset(Biome[] inp_map, Vector2Int size)
+    public static Ruleset GenerateRuleset(Biome[] inp_map, Vector2Int size, bool output_stats)
     {
         float t = Time.realtimeSinceStartup;
         // Make Ruleset based off inp_map
@@ -235,7 +247,8 @@ public class WaveFunctionCollapse : MonoBehaviour
             set.height.Add(_h);
             set.length.Add(_l);
         }
-        Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the ruleset.");
+        if (output_stats)
+            Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the ruleset.");
         return set;
     }
 
@@ -274,33 +287,20 @@ public class WaveFunctionCollapse : MonoBehaviour
         return true;
     }
 
-    /// <summary>
-    /// Calculate which cell has the lowest entropy
-    /// </summary>
-    /// <param name="cells">Cell[] of all cells to check</param>
-    /// <returns>Cell of chosen lowest entropy</returns>
-    private static Cell LowestEntropy(Cell[] cells)
+    private static Cell LowestEntropy(Cell[] cells, List<Cell> lowest_ent)
     {
-        List<int> indexes = new List<int>();
-        int lowest_entropy = int.MaxValue;
-        for (int i = 0; i < cells.Length; i++)
+        if (lowest_ent.Count == 0)
         {
-            if (cells[i].collapsed)
-                continue;
-            int entropy = cells[i].options.Count;
-            if (entropy < lowest_entropy)
-            {
-                lowest_entropy = entropy;
-                indexes.Clear();
-                indexes.Add(i);
-            }
-            else if (entropy == lowest_entropy)
-            {
-                indexes.Add(i);
-            }
+            int selected_cell;
+            do
+                selected_cell = Random.Range(0, cells.Length);
+            while (cells[selected_cell].collapsed);
+            return cells[selected_cell];
         }
-        int randomIndex = indexes[Random.Range(0, indexes.Count)];
-        return cells[randomIndex];
+        else
+        {
+            return lowest_ent[Random.Range(0, lowest_ent.Count)];
+        }
     }
     #endregion
     #region Value Fetching

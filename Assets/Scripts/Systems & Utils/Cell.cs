@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
 public class Cell
 {
     public bool collapsed = false;
@@ -21,7 +20,7 @@ public class Cell
     {
         if (collapsed || options.Count <= 0)
             return biome;
-
+        // Generate biased weights based on height and length
         List<BiomeWeight> weights = new List<BiomeWeight>();
         float total_weight = 0;
         for (int i = 0; i < options.Count; i++)
@@ -33,6 +32,7 @@ public class Cell
             if (weight.impact != 0)
                 weights.Add(weight);
         }
+        // Select biome randomly with weight
         float rand_point = Random.Range(0, total_weight);
         int index = -1;
         foreach (BiomeWeight w in weights)
@@ -71,13 +71,16 @@ public class Cell
             foreach (BiomeWeight w in rule.wl)
                 if (w.biome == option.biome)
                 {
+                    if (w.impact == 0)
+                        break;
                     BiomeWeight new_w = option;
                     new_w.impact *= w.impact;
                     new_options.Add(new_w);
                     break;
                 }
-        options = new_options;
-        if (options.Count == 0)
+        if (new_options.Count == 0)
             Debug.LogError("No more options");
+        else
+            options = new_options;
     }
 }
