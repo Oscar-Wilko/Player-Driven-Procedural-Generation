@@ -10,8 +10,6 @@ public class WFCVisual : MonoBehaviour
     // Tweaks
     [Header("Tweaking Variables")]
     public Vector2Int size;
-    // Tracking
-    private Biome[] last_map;
     // Rules
     [Header("Rulesets")]
     public Ruleset default_ruleset;
@@ -56,7 +54,6 @@ public class WFCVisual : MonoBehaviour
             return;
         }
         wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
-        //wfc.GenerateWFC(default_ruleset, size);
         test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size, false);
     }
 
@@ -70,9 +67,9 @@ public class WFCVisual : MonoBehaviour
     }
 
     /// <summary>
-    /// UI reference to import WFC map
+    /// UI reference to load WFC map
     /// </summary>
-    public void Import()
+    public void Load()
     {
         SavedImage data = SaveSystem.LoadImageInfo("map");
         if (data == null)
@@ -81,9 +78,9 @@ public class WFCVisual : MonoBehaviour
     }
 
     /// <summary>
-    /// UI reference to export WFC map
+    /// UI reference to save WFC map
     /// </summary>
-    public void Export()
+    public void Save()
     {
         if (wfc.cur_output.width <= 0 || wfc.cur_output.height <= 0)
             return;

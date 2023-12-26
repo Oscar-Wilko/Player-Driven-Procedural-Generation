@@ -74,89 +74,12 @@ public class WaveFunctionCollapse : MonoBehaviour
 
             // Update neighbouring cells
             t_pre = Time.realtimeSinceStartup;
-            Vector2Int g_pos = new Vector2Int(low_e.index % inp.width, low_e.index / inp.width);
-            Rules cur_rules = RulesOfBiome(inp.ruleset, low_e.biome);
-            float ent;
-            // Left Cell
-            if (g_pos.x > 0)
-            {
-                if (!cells[low_e.index - 1].collapsed)
-                {
-                    cells[low_e.index - 1].Update(cur_rules.left_rule);
-                    ent = cells[low_e.index - 1].options.Count;
-                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
-                    { 
-                        if (!lowest_entropy.Contains(cells[low_e.index - 1]))
-                            lowest_entropy.Add(cells[low_e.index - 1]);
-                    }
-                    else if (ent < lowest_entropy[0].options.Count)
-                    {
-                        lowest_entropy.Clear();
-                        lowest_entropy.Add(cells[low_e.index - 1]);
-                    }
-                }
-            }
-            // Right Cell
-            if (g_pos.x < inp.width - 1)
-            {
-                if (!cells[low_e.index + 1].collapsed)
-                {
-                    cells[low_e.index + 1].Update(cur_rules.right_rule);
-                    ent = cells[low_e.index + 1].options.Count;
-                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
-                    {
-                        if (!lowest_entropy.Contains(cells[low_e.index + 1]))
-                            lowest_entropy.Add(cells[low_e.index + 1]);
-                    }
-                    else if (ent < lowest_entropy[0].options.Count)
-                    {
-                        lowest_entropy.Clear();
-                        lowest_entropy.Add(cells[low_e.index + 1]);
-                    }
-                }
-            }
-            // Below Cell
-            if (g_pos.y > 0)
-            {
-                if (!cells[low_e.index - inp.width].collapsed)
-                {
-                    cells[low_e.index - inp.width].Update(cur_rules.down_rule);
-                    ent = cells[low_e.index - inp.width].options.Count;
-                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
-                    {
-                        if (!lowest_entropy.Contains(cells[low_e.index - inp.width]))
-                            lowest_entropy.Add(cells[low_e.index - inp.width]);
-                    }
-                    else if (ent < lowest_entropy[0].options.Count)
-                    {
-                        lowest_entropy.Clear();
-                        lowest_entropy.Add(cells[low_e.index - inp.width]);
-                    }
-                }
-            }
-            // Above Cell
-            if (g_pos.y < inp.height - 1)
-            {
-                if (!cells[low_e.index + inp.width].collapsed)
-                {
-                    cells[low_e.index + inp.width].Update(cur_rules.up_rule);
-                    ent = cells[low_e.index + inp.width].options.Count;
-                    if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
-                    {
-                        if (!lowest_entropy.Contains(cells[low_e.index + inp.width]))
-                            lowest_entropy.Add(cells[low_e.index + inp.width]);
-                    }
-                    else if (ent < lowest_entropy[0].options.Count)
-                    {
-                        lowest_entropy.Clear();
-                        lowest_entropy.Add(cells[low_e.index + inp.width]);
-                    }
-                }
-            }
+            UpdateNeighbouringCells(cells, low_e, inp, lowest_entropy);
             t_upd += Time.realtimeSinceStartup - t_pre;
 
             pass++;
 
+            // Update current output if going frame by frame
             if (frame_by_frame)
             {
                 for (int i = 0; i < cells.Length; i++)
@@ -167,17 +90,19 @@ public class WaveFunctionCollapse : MonoBehaviour
                         yield return new WaitForEndOfFrame();
             }
         }
-        Debug.Log("Finished");
 
+        // Final update for current output
         for (int i = 0; i < cells.Length; i++)
             wfc.map[i] = cells[i].biome;
         cur_output = wfc;
 
+        Debug.Log("Finished");
         if (!frame_by_frame && output_stats)
             Debug.Log(
                 "It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the WFC biome map.\n" +
                 "Updates took " + t_upd + " seconds. Collapses took " + t_col + " seconds. Entropy took " + t_ent + " seconds.");
 
+        // Repeat if looping enabled
         if (loop_generating)
         {
             yield return new WaitForEndOfFrame();
@@ -187,6 +112,72 @@ public class WaveFunctionCollapse : MonoBehaviour
         else
         {
             generating = false;
+        }
+    }
+
+    /// <summary>
+    /// Update cells surrounding a selected cell based on current lowest entropy and WFC input variables
+    /// </summary>
+    /// <param name="cells">Cell[] of all cells</param>
+    /// <param name="low_e">Cell of selected cell</param>
+    /// <param name="inp">WFCInput of dimensions of cell map</param>
+    /// <param name="lowest_entropy">List<Cell> of current lowest entropy cells</param>
+    private static void UpdateNeighbouringCells(Cell[] cells, Cell low_e, WFCInput inp, List<Cell> lowest_entropy)
+    {
+        Vector2Int g_pos = new Vector2Int(low_e.index % inp.width, low_e.index / inp.width);
+        Rules cur_rules = RulesOfBiome(inp.ruleset, low_e.biome);
+        
+        if (g_pos.x > 0)                // Left Cell
+            UpdateCell(cells, low_e, inp, lowest_entropy, cur_rules, Direction.Left);        
+        if (g_pos.x < inp.width - 1)    // Right Cell
+            UpdateCell(cells, low_e, inp, lowest_entropy, cur_rules, Direction.Right);        
+        if (g_pos.y > 0)                // Below Cell
+            UpdateCell(cells, low_e, inp, lowest_entropy, cur_rules, Direction.Down);        
+        if (g_pos.y < inp.height - 1)   // Above Cell
+            UpdateCell(cells, low_e, inp, lowest_entropy, cur_rules, Direction.Up);
+    }
+
+    /// <summary>
+    /// Update a cell 1 space away from another cell in a specific direction with new rules 
+    /// </summary>
+    /// <param name="cells">Cell[] of all cells</param>
+    /// <param name="low_e">Cell of selected cell</param>
+    /// <param name="inp">WFCInput of dimensions of cell map</param>
+    /// <param name="lowest_entropy">List<Cell> of current lowest entropy cells</param>
+    /// <param name="cur_rules">Rules of rules to dictate new cells traits</param>
+    /// <param name="dir">Direction to check from selected cell</param>
+    private static void UpdateCell(Cell[] cells, Cell low_e, WFCInput inp, List<Cell> lowest_entropy, Rules cur_rules, Direction dir)
+    {
+        // Get index based on direction
+        int index = low_e.index;
+        switch (dir)
+        {
+            case Direction.Up: index += inp.width; break;
+            case Direction.Down: index -= inp.width; break;
+            case Direction.Left: index -= 1; break;
+            case Direction.Right: index += 1; break;
+        }
+        if (cells[index].collapsed)
+            return;
+        // Update cell with rules of that direction
+        switch (dir)
+        {
+            case Direction.Up: cells[index].Update(cur_rules.up_rule); break;
+            case Direction.Down: cells[index].Update(cur_rules.down_rule); break;
+            case Direction.Left: cells[index].Update(cur_rules.left_rule); break;
+            case Direction.Right: cells[index].Update(cur_rules.right_rule); break;
+        }
+        // Update lowest entropy list
+        int ent = cells[index].options.Count;
+        if (lowest_entropy.Count == 0 || ent == lowest_entropy[0].options.Count)
+        {
+            if (!lowest_entropy.Contains(cells[index]))
+                lowest_entropy.Add(cells[index]);
+        }
+        else if (ent < lowest_entropy[0].options.Count)
+        {
+            lowest_entropy.Clear();
+            lowest_entropy.Add(cells[index]);
         }
     }
     #endregion

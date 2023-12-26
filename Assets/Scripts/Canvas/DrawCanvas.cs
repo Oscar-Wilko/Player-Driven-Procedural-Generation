@@ -22,6 +22,7 @@ public class DrawCanvas : MonoBehaviour
     public BiomePixel[] biome_palette;
 
     // Trackers
+    public bool active;
     private BiomePixel selected_pixel;
     private Biome[] current_map;
 
@@ -34,6 +35,9 @@ public class DrawCanvas : MonoBehaviour
 
     private void Update()
     {
+        if (!active)
+            return;
+
         if (Input.GetMouseButton(0))
             DrawAttempt(selected_pixel);
         else if (Input.GetMouseButtonDown(1))

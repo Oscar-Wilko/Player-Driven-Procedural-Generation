@@ -45,15 +45,9 @@ public class Cell
         }
 
         index = Mathf.Clamp(index, 0, weights.Count - 1);
-        if (weights.Count != 0)
-        {
-            biome = weights[index].biome;
-        }
-        else
-        {
+        biome = weights.Count == 0 ? 0 : weights[index].biome;
+        if (weights.Count == 0)
             Debug.LogWarning("No Valid Biomes For Collapsing");
-            biome = 0;
-        }
         collapsed = true;
         return biome;
     }
@@ -66,9 +60,12 @@ public class Cell
     {
         if (collapsed || options.Count <= 0 || rule.wl_all)
             return;
+
         List<BiomeWeight> new_options = new List<BiomeWeight>();
         foreach (BiomeWeight option in options)
+        {
             foreach (BiomeWeight w in rule.wl)
+            {
                 if (w.biome == option.biome)
                 {
                     if (w.impact == 0)
@@ -78,9 +75,9 @@ public class Cell
                     new_options.Add(new_w);
                     break;
                 }
-        if (new_options.Count == 0)
-            Debug.LogError("No more options");
-        else
+            }
+        }
+        if (new_options.Count != 0)
             options = new_options;
     }
 }

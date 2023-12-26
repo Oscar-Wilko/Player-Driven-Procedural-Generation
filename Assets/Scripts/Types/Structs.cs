@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 #region WFC
 public struct WFCInput
@@ -85,4 +86,13 @@ public struct MapInfo
     public int width;
     public int height;
 }
+#endregion
+#region MapGen
+[System.Serializable]
+public struct TileDictionaryInstance
+{
+    public TileID id;
+    public Tile tile;
+}
+
 #endregion

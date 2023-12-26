@@ -29,40 +29,45 @@ public static class PCGUtilities
         {
             for (int y = 0; y < input_levels.GetLength(1); y++)
             {
-                if (input_levels[x, y] && !checked_tiles.ContainsKey(new Vector2Int(x, y)))
+                if (!input_levels[x, y] || !checked_tiles.ContainsKey(new Vector2Int(x, y)))
+                    break;
+
+                // Found new cave tile
+                List<Vector2Int> new_tiles = new List<Vector2Int> { new Vector2Int(x, y) };
+                cave_tiles.Add(new Vector2Int(x, y));
+                while (new_tiles.Count != 0)
                 {
-                    // Found new cave tile
-                    List<Vector2Int> new_tiles = new List<Vector2Int> { new Vector2Int(x, y) };
-                    cave_tiles.Add(new Vector2Int(x, y));
-                    while (new_tiles.Count != 0)
+                    temp_tiles = new List<Vector2Int>(new_tiles);
+                    new_tiles.Clear();
+                    foreach (Vector2Int tile in temp_tiles)
                     {
-                        temp_tiles = new List<Vector2Int>(new_tiles);
-                        new_tiles.Clear();
-                        foreach (Vector2Int tile in temp_tiles)
+                        foreach (Vector2Int dir in directions)
                         {
-                            foreach (Vector2Int dir in directions)
-                            {
-                                Vector2Int cur_vec = tile + dir;
-                                if (cur_vec.x < 0 || cur_vec.y < 0) continue;
-                                if (cur_vec.x >= input_levels.GetLength(0) || cur_vec.y >= input_levels.GetLength(1)) continue;
-                                if (!input_levels[cur_vec.x, cur_vec.y]) continue;
-                                if (checked_tiles.ContainsKey(cur_vec)) continue;
-                                new_tiles.Add(cur_vec);
-                                checked_tiles.Add(cur_vec, true);
-                                cave_tiles.Add(cur_vec);
-                            }
+                            Vector2Int cur_vec = tile + dir;
+                            if (cur_vec.x < 0 || cur_vec.y < 0) continue;
+                            if (cur_vec.x >= input_levels.GetLength(0) || cur_vec.y >= input_levels.GetLength(1)) continue;
+                            if (!input_levels[cur_vec.x, cur_vec.y]) continue;
+                            if (checked_tiles.ContainsKey(cur_vec)) continue;
+                            new_tiles.Add(cur_vec);
+                            checked_tiles.Add(cur_vec, true);
+                            cave_tiles.Add(cur_vec);
                         }
                     }
-                    if (min_fill)
-                    {
-                        if (cave_tiles.Count < quantity) foreach (Vector2Int tile in cave_tiles) fill_array[tile.x, tile.y] = false;
-                    }
-                    else
-                    {
-                        if (cave_tiles.Count > quantity) foreach (Vector2Int tile in cave_tiles) fill_array[tile.x, tile.y] = false;
-                    }
-                    cave_tiles.Clear();
                 }
+                if (min_fill)
+                {
+                    if (cave_tiles.Count < quantity)
+                        foreach (Vector2Int tile in cave_tiles)
+                            fill_array[tile.x, tile.y] = false;
+                }
+                else
+                {
+                    if (cave_tiles.Count > quantity)
+                        foreach (Vector2Int tile in cave_tiles)
+                            fill_array[tile.x, tile.y] = false;
+                }
+                cave_tiles.Clear();
+
             }
         }
         return fill_array;
@@ -78,12 +83,9 @@ public static class PCGUtilities
     {
         bool[,] threshold_levels = new bool[input_levels.GetLength(0), input_levels.GetLength(1)];
         for (int x = 0; x < input_levels.GetLength(0); x++)
-        {
             for (int y = 0; y < input_levels.GetLength(1); y++)
-            {
                 threshold_levels[x, y] = input_levels[x, y] <= threshold;
-            }
-        }
+
         return threshold_levels;
     }
 

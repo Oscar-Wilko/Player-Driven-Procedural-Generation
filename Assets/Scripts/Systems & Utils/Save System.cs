@@ -11,8 +11,19 @@ public class SavedImage
     }
 }
 
+[System.Serializable]
+public class SavedTiles
+{
+    public TileID[,] tiles;
+    public SavedTiles(TileID[,] n_tiles)
+    {
+        tiles = n_tiles;
+    }
+}
+
 public static class SaveSystem
 {
+    #region Saving
     /// <summary>
     /// Save image information with file name
     /// </summary>
@@ -36,6 +47,29 @@ public static class SaveSystem
     }
 
     /// <summary>
+    /// Save tile information with file name
+    /// </summary>
+    /// <param name="info">Savedtile of tile array data</param>
+    /// <param name="file_name">String of filename to save with</param>
+    public static void SaveTileInfo(SavedTiles info, string file_name)
+    {
+        FolderCheck();
+        string saved_data = JsonUtility.ToJson(info, true);
+        File.WriteAllText(GetSaveFileLocation(file_name), saved_data);
+    }
+
+    /// <summary>
+    /// Save tile information with file name
+    /// </summary>
+    /// <param name="info">TileID[,] of 2D tile array</param>
+    /// <param name="file_name">String of filename to save with</param>
+    public static void SaveTileInfo(TileID[,] info, string file_name)
+    {
+        SaveTileInfo(new SavedTiles(info), file_name);
+    }
+    #endregion
+    #region Loading
+    /// <summary>
     /// Load image information from file name
     /// </summary>
     /// <param name="file_name">String of file name</param>
@@ -53,6 +87,25 @@ public static class SaveSystem
         return null;
     }
 
+    /// <summary>
+    /// Load tile information from file name
+    /// </summary>
+    /// <param name="file_name">String of file name</param>
+    /// <returns>SavedTiles of exported tile information</returns>
+    public static SavedTiles LoadTileInfo(string file_name)
+    {
+        FolderCheck();
+        if (File.Exists(GetSaveFileLocation(file_name)))
+        {
+            string loaded_data = File.ReadAllText(GetSaveFileLocation(file_name));
+            SavedTiles data = JsonUtility.FromJson<SavedTiles>(loaded_data);
+            if (data != null)
+                return data;
+        }
+        return null;
+    }
+    #endregion
+    #region Folder & File Checking
     /// <summary>
     /// Get File Location Of Saved Information
     /// </summary>
@@ -79,4 +132,5 @@ public static class SaveSystem
         if (!Directory.Exists(GetSavedDataLocation()))
             Directory.CreateDirectory(GetSavedDataLocation());
     }
+    #endregion
 }

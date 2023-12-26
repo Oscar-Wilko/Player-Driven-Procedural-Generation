@@ -2,16 +2,20 @@ using UnityEngine;
 
 public static class Noise
 {
-    // Help from Lejynn (https://www.youtube.com/watch?v=XpG3YqUkCTY) and Sebastian Lague (https://www.youtube.com/watch?v=wbpMiKiSKm8&list=PLFt_AvWsXl0eBW2EiBtl_sxmDtSgZBxB3)
+    // Help from Lejynn (https://www.youtube.com/watch?v=XpG3YqUkCTY)
+    // and Sebastian Lague (https://www.youtube.com/watch?v=wbpMiKiSKm8&list=PLFt_AvWsXl0eBW2EiBtl_sxmDtSgZBxB3)
     public static float[,] Generate2DLevels(Vector2Int size, int octaves, float frequency, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
     {
         float[,] map_levels = new float[size.x, size.y];
 
         Vector2[] octave_offsets = new Vector2[octaves];
-        for (int i = 0; i < octaves; i ++) octave_offsets[i] = new Vector2((seed*64546) % 100000 + offset.x, (seed * 98413) % 100000 - offset.y);
+        for (int i = 0; i < octaves; i ++) 
+            octave_offsets[i] = new Vector2((seed*64546) % 100000 + offset.x, (seed * 98413) % 100000 - offset.y);
 
-        if (scale.y < 0.0001f) scale.y = 0.0001f;
-        if (scale.x < 0.0001f) scale.x = 0.0001f;
+        if (scale.y < 0.0001f) 
+            scale.y = 0.0001f;
+        if (scale.x < 0.0001f) 
+            scale.x = 0.0001f;
 
         float half_width = size.x * 0.5f;
         float half_height = size.y * 0.5f;
@@ -38,8 +42,10 @@ public static class Noise
                     temp_freq *= lacunarity;
                 }
 
-                if (noise_height < min_value) min_value= noise_height;
-                if (noise_height > max_value) max_value= noise_height;
+                if (noise_height < min_value) 
+                    min_value= noise_height;
+                if (noise_height > max_value) 
+                    max_value= noise_height;
 
                 map_levels[x, y] = noise_height;
             }
@@ -67,9 +73,11 @@ public static class Noise
         System.Random rng = new System.Random(seed);
 
         float[] octave_offsets = new float[octaves];
-        for (int i = 0; i < octaves; i++) octave_offsets[i] = rng.Next(-100000, 100000) + offset.x;
+        for (int i = 0; i < octaves; i++) 
+            octave_offsets[i] = rng.Next(-100000, 100000) + offset.x;
 
-        if (scale.x <= 0.0001f) scale.x = 0.0001f;
+        if (scale.x <= 0.0001f) 
+            scale.x = 0.0001f;
 
         float half_width = size * 0.5f;
 
@@ -92,14 +100,16 @@ public static class Noise
                 temp_freq *= lacunarity;
             }
 
-            if (noise_height < min_value) min_value = noise_height;
-            if (noise_height > max_value) max_value = noise_height;
+            if (noise_height < min_value) 
+                min_value = noise_height;
+            if (noise_height > max_value) 
+                max_value = noise_height;
 
             map_levels[x] = noise_height;
         }
 
-        for (int x = 0; x < size; x++) map_levels[x] = Mathf.InverseLerp(min_value, max_value, map_levels[x]);
-
+        for (int x = 0; x < size; x++) 
+            map_levels[x] = Mathf.InverseLerp(min_value, max_value, map_levels[x]);
 
         return map_levels;
     }
