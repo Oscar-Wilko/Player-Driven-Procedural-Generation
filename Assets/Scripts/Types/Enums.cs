@@ -1,12 +1,18 @@
 public enum Biome
 {
-    None,
-    Stone,
-    Surface,
-    Ice,
-    Desert,
-    Fire,
-    Wind
+    None = 0,
+    Standard = 1,
+    Frozen = 2,
+    Desert = 3,
+    Swamp = 4,
+    Rocky = 5,
+    SharpRocky = 6,
+    Lava = 7,
+    Water = 8,
+    Ocean = 9,
+    Jungle = 10,
+    Radioactive = 11,
+    Lushious = 12
 }
 
 /// <summary>
@@ -27,7 +33,22 @@ public enum TileID
     Molten = 10,
     Magma = 11,
     Cloud = 12,
-    Air = 13
+    Air = 13,
+    BurriedItem = 14,
+    TreeLog = 15,
+    TreeLeaves = 16,
+    Obsidian = 17,
+    LowValOre = 18,
+    HighValOre = 19,
+    Vines = 20,
+    Bushes = 21,
+    Flowers = 22,
+    RadioactiveBlock = 23,
+    HardIce = 24,
+    ColdWater = 25,
+    Icicles = 26,
+    Snow = 27,
+    Water = 28
 }
 
 public enum Direction

@@ -74,7 +74,6 @@ public struct LengthVariance
 [System.Serializable]
 public struct BiomePixel
 {
-    public int ID;
     public Biome biome;
     public Color colour;
 }
@@ -94,5 +93,41 @@ public struct TileDictionaryInstance
     public TileID id;
     public Tile tile;
 }
+[System.Serializable]
+public struct TileInfo
+{
+    public TileID[] map;
+    public int width;
+    public int height;
+    public TileInfo(int x, int y)
+    {
+        map = new TileID[x * y];
+        width = x;
+        height = y;
+    }
+}
 
+public struct ProceduralLayers
+{
+    public float[] surface_height;
+    public bool[,] layer_cave;
+    public bool[,] layer_large_clump;
+    public bool[,] layer_small_clump;
+    public bool[,] layer_dots;
+}
+
+[System.Serializable]
+public struct WaveVariables
+{
+    [Range(0, 50)]
+    public int octaves;
+    [Range(100000, 10000000)]
+    public int seed;
+    [Range(0.0f, 1.0f)]
+    public float persistance;
+    [Range(0.0f, 1.0f)]
+    public float lacunarity;
+    public Vector2 scale;
+    public Vector2 offset;
+}
 #endregion

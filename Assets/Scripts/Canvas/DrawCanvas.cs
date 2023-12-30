@@ -30,7 +30,7 @@ public class DrawCanvas : MonoBehaviour
     {
         GenerateSprite();
         GeneratePalette();
-        SetPalettePixel(0);
+        selected_pixel = biome_palette[0];
     }
 
     private void Update()
@@ -50,7 +50,7 @@ public class DrawCanvas : MonoBehaviour
     private void GenerateSprite()
     {
         current_map = new Biome[texture_size.x * texture_size.y];
-        Texture2D blank_texture = BlankTexture(texture_size, PixelFromID(0));
+        Texture2D blank_texture = BlankTexture(texture_size, biome_palette[0]);
         sprite = GetComponent<SpriteRenderer>();
         sprite.sprite = Sprite.Create(blank_texture, 
             new Rect(0, 0, texture_size.x, texture_size.y), 
@@ -194,20 +194,7 @@ public class DrawCanvas : MonoBehaviour
             new Vector2(0.5f, 0.5f), PPU());
     }
     #endregion
-    #region Biome Conversion
-    /// <summary>
-    /// Get biome pixel of certain ID
-    /// </summary>
-    /// <param name="ID">Int of input ID</param>
-    /// <returns>BiomePixel of pixel data</returns>
-    private BiomePixel PixelFromID(int ID)
-    {
-        foreach(BiomePixel pixel in biome_palette) 
-            if (pixel.ID == ID) 
-                return pixel;
-        return biome_palette[0];
-    }
-    
+    #region Biome Conversion    
     /// <summary>
     /// Get biome pixel of certain name
     /// </summary>
@@ -394,7 +381,6 @@ public class DrawCanvas : MonoBehaviour
     }
     #endregion
     #region Quick Functions
-    public void SetPalettePixel(int ID) { selected_pixel = PixelFromID(ID); }
     public void SetPalettePixel(BiomePixel pixel) { selected_pixel = pixel; }
     public Biome[] BiomeMap() { return current_map; }
 

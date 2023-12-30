@@ -4,13 +4,16 @@ public static class Noise
 {
     // Help from Lejynn (https://www.youtube.com/watch?v=XpG3YqUkCTY)
     // and Sebastian Lague (https://www.youtube.com/watch?v=wbpMiKiSKm8&list=PLFt_AvWsXl0eBW2EiBtl_sxmDtSgZBxB3)
-    public static float[,] Generate2DLevels(Vector2Int size, int octaves, float frequency, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
+    public static float[,] Generate2DLevels(Vector2Int size, int octaves, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
     {
         float[,] map_levels = new float[size.x, size.y];
 
+        System.Random rng = new System.Random(seed);
         Vector2[] octave_offsets = new Vector2[octaves];
         for (int i = 0; i < octaves; i ++) 
-            octave_offsets[i] = new Vector2((seed*64546) % 100000 + offset.x, (seed * 98413) % 100000 - offset.y);
+            octave_offsets[i] = new Vector2(
+                rng.Next(-100000,100000) + offset.x, 
+                rng.Next(-100000,100000) - offset.y);
 
         if (scale.y < 0.0001f) 
             scale.y = 0.0001f;
@@ -28,7 +31,7 @@ public static class Noise
             for (int y = 0; y < size.y; y ++)
             {
                 float temp_amp = 1;
-                float temp_freq = frequency;
+                float temp_freq = 1;
                 float noise_height = 0;
 
                 for(int i = 0; i < octaves; i ++)
@@ -51,27 +54,28 @@ public static class Noise
             }
         }
 
-        for (int x = 0; x < size.x; x++) for (int y = 0; y < size.y; y++) map_levels[x, y] = Mathf.InverseLerp(min_value, max_value, map_levels[x, y]);
+        for (int x = 0; x < size.x; x++) 
+            for (int y = 0; y < size.y; y++) 
+                map_levels[x, y] = Mathf.InverseLerp(min_value, max_value, map_levels[x, y]);
 
         return map_levels;
     }
 
     public static float[,] Generate2DLevels(Vector2Int size, WaveVariables properties)
     {
-        return Generate2DLevels(size, properties.octaves, properties.frequency, properties.seed, properties.persistance, properties.lacunarity, properties.scale, properties.offset);
+        return Generate2DLevels(size, properties.octaves, properties.seed, properties.persistance, properties.lacunarity, properties.scale, properties.offset);
     }
     
     public static float[] Generate1DLevels(int size, WaveVariables properties)
     {
-        return Generate1DLevels(size, properties.octaves, properties.frequency, properties.seed, properties.persistance, properties.lacunarity, properties.scale, properties.offset);
+        return Generate1DLevels(size, properties.octaves, properties.seed, properties.persistance, properties.lacunarity, properties.scale, properties.offset);
     }
 
-    public static float[] Generate1DLevels(int size, int octaves, float frequency, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
+    public static float[] Generate1DLevels(int size, int octaves, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
     {
         float[] map_levels = new float[size];
 
         System.Random rng = new System.Random(seed);
-
         float[] octave_offsets = new float[octaves];
         for (int i = 0; i < octaves; i++) 
             octave_offsets[i] = rng.Next(-100000, 100000) + offset.x;
@@ -87,7 +91,7 @@ public static class Noise
         for (int x = 0; x < size; x++)
         {
             float temp_amp = 1;
-            float temp_freq = frequency;
+            float temp_freq = 1;
             float noise_height = 0;
 
             for (int i = 0; i < octaves; i++)
@@ -108,7 +112,7 @@ public static class Noise
             map_levels[x] = noise_height;
         }
 
-        for (int x = 0; x < size; x++) 
+        for (int x = 0; x < size; x++)
             map_levels[x] = Mathf.InverseLerp(min_value, max_value, map_levels[x]);
 
         return map_levels;

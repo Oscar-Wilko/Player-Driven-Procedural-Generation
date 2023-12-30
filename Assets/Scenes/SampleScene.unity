@@ -2618,6 +2618,51 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   biome_size: 16
   transition_percentage: 100
+  properties_surface:
+    octaves: 2
+    seed: 2748408
+    persistance: 0.5
+    lacunarity: 0.8
+    scale: {x: 50, y: 1}
+    offset: {x: 0, y: 0}
+  max_perc_height: 85
+  min_perc_height: 90
+  properties_cave:
+    octaves: 2
+    seed: 9054140
+    persistance: 0.25
+    lacunarity: 0.8
+    scale: {x: 50, y: 50}
+    offset: {x: 0, y: 0}
+  cave_threshold: 0.4
+  properties_l_clump:
+    octaves: 4
+    seed: 0
+    persistance: 0.4
+    lacunarity: 0.8
+    scale: {x: 50, y: 50}
+    offset: {x: 0, y: 0}
+  l_clump_threshold: 0.7
+  properties_s_clump:
+    octaves: 5
+    seed: 3568153
+    persistance: 0.5
+    lacunarity: 0.8
+    scale: {x: 50, y: 50}
+    offset: {x: 0, y: 0}
+  s_clump_threshold: 0.8
+  properties_dots:
+    octaves: 4
+    seed: 6721019
+    persistance: 0.5
+    lacunarity: 0.8
+    scale: {x: 50, y: 50}
+    offset: {x: 0, y: 0}
+  dots_threshold: 0.9
+  cur_output:
+    map: 
+    width: 0
+    height: 0
 --- !u!4 &789854326
 Transform:
   m_ObjectHideFlags: 0
@@ -3141,27 +3186,32 @@ MonoBehaviour:
   texture_pixels_per_unit: 3
   texture_size: {x: 16, y: 16}
   biome_palette:
-  - ID: 0
-    biome: 0
+  - biome: 0
     colour: {r: 1, g: 1, b: 1, a: 0.49019608}
-  - ID: 1
-    biome: 1
-    colour: {r: 0.5377358, g: 0.5377358, b: 0.5377358, a: 1}
-  - ID: 2
-    biome: 2
-    colour: {r: 0, g: 1, b: 0.14216971, a: 1}
-  - ID: 3
-    biome: 3
-    colour: {r: 0, g: 1, b: 0.9604409, a: 1}
-  - ID: 4
-    biome: 4
-    colour: {r: 1, g: 0.9118242, b: 0, a: 1}
-  - ID: 5
-    biome: 5
-    colour: {r: 1, g: 0, b: 0, a: 1}
-  - ID: 6
-    biome: 6
-    colour: {r: 0.7146226, g: 0.9528302, b: 0.90563065, a: 1}
+  - biome: 1
+    colour: {r: 0.095713854, g: 1, b: 0, a: 1}
+  - biome: 2
+    colour: {r: 0.504717, g: 0.9661019, b: 1, a: 1}
+  - biome: 3
+    colour: {r: 1, g: 0.9451673, b: 0, a: 1}
+  - biome: 4
+    colour: {r: 0.2115777, g: 0.4528302, b: 0.040583827, a: 1}
+  - biome: 5
+    colour: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 1}
+  - biome: 6
+    colour: {r: 0.3018868, g: 0.2846694, b: 0.2748309, a: 1}
+  - biome: 7
+    colour: {r: 1, g: 0.10620218, b: 0, a: 1}
+  - biome: 8
+    colour: {r: 0, g: 0.5815592, b: 1, a: 1}
+  - biome: 9
+    colour: {r: 0, g: 0.362131, b: 0.7735849, a: 1}
+  - biome: 10
+    colour: {r: 0.50622267, g: 0.8301887, b: 0.27020293, a: 1}
+  - biome: 11
+    colour: {r: 0.42396927, g: 0, b: 1, a: 1}
+  - biome: 12
+    colour: {r: 0.8509804, g: 0.16470587, b: 0.7396971, a: 1}
   active: 0
 --- !u!1 &1025371152
 GameObject:
@@ -5433,7 +5483,41 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 769c5a2f7edac754e856ba5613c48f8e, type: 2}
   - id: 13
     tile: {fileID: 11400000, guid: db05dbf74fe495649bf904b920ae2e1f, type: 2}
-  tiles_per_step: 5000
+  - id: 14
+    tile: {fileID: 11400000, guid: e6d960702d13bb54dada785d97f433ac, type: 2}
+  - id: 15
+    tile: {fileID: 11400000, guid: 23a697fab33dc20409f77ba74d414fff, type: 2}
+  - id: 16
+    tile: {fileID: 11400000, guid: f7b9a82b898b1cf439958aed89384748, type: 2}
+  - id: 17
+    tile: {fileID: 11400000, guid: de633208d9fb9a2479f5ccdd55663aa1, type: 2}
+  - id: 18
+    tile: {fileID: 11400000, guid: 4b7051247c621ed49a12dc3cf6366b12, type: 2}
+  - id: 19
+    tile: {fileID: 11400000, guid: bc55fcc524868cc4185baee08925d645, type: 2}
+  - id: 20
+    tile: {fileID: 11400000, guid: 92ba564f98270754493f24cc6253177f, type: 2}
+  - id: 21
+    tile: {fileID: 11400000, guid: 51e199185720b2348999deb6bc76efdd, type: 2}
+  - id: 22
+    tile: {fileID: 11400000, guid: 68ab98b483e4a414c9c58c2a84e84532, type: 2}
+  - id: 23
+    tile: {fileID: 11400000, guid: 6c24f565ed1305547a1d5b8ba6cbf56c, type: 2}
+  - id: 24
+    tile: {fileID: 11400000, guid: 63cf1ea7e1f099e49b77e34e8bc9f179, type: 2}
+  - id: 25
+    tile: {fileID: 11400000, guid: edbd6f7e0a01a8847acd6a5f940d0e6c, type: 2}
+  - id: 26
+    tile: {fileID: 11400000, guid: f6eb6753fee2eca42b3698aaa5020e44, type: 2}
+  - id: 27
+    tile: {fileID: 11400000, guid: 20d12ef9ee957bc44a3e22d279e03f2f, type: 2}
+  - id: 28
+    tile: {fileID: 11400000, guid: a1902cd829015ea449b112db54f16143, type: 2}
+  tiles_per_step: 10000
+  prev_map:
+    map: 
+    width: 0
+    height: 0
 --- !u!1 &2132417785
 GameObject:
   m_ObjectHideFlags: 0

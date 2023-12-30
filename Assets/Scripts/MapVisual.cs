@@ -16,7 +16,7 @@ public class MapVisual : MonoBehaviour
     [Header("Tweaking Values")]
     public int tiles_per_step;
     [Header("Tracking Values")]
-    public TileID[,] prev_map = new TileID[0,0];
+    public TileInfo prev_map = new TileInfo(0,0);
     private bool generating = false;
 
     private void Awake()
@@ -37,27 +37,27 @@ public class MapVisual : MonoBehaviour
                 StartCoroutine(ShowMap(map_gen.cur_output));
     }
 
-    private IEnumerator ShowMap(TileID[,] map)
+    private IEnumerator ShowMap(TileInfo map)
     {
         if (generating)
             yield break;
         generating = true;
         float t = Time.realtimeSinceStartup;
-        int width = map.GetLength(0);
-        int height = map.GetLength(1);
         output_tilemap.ClearAllTiles();
-        prev_map = new TileID[width, height];
-        Vector2Int offset = new Vector2Int(0, -height/2);
+        prev_map.map = new TileID[map.width * map.height];
+        prev_map.width = map.width;
+        prev_map.height = map.height;
+        Vector2Int offset = new Vector2Int(0, -map.height/2);
         List<Vector3Int> pos_array = new List<Vector3Int>();
         List<TileBase> tile_array = new List<TileBase>();
-        for(int x = 0; x < map.GetLength(0); x ++)
+        for(int x = 0; x < map.width; x ++)
         {
-            for (int y = 0; y < map.GetLength(1); y++)
+            for (int y = 0; y < map.height; y++)
             {
-                int index = x + y * width;
+                int index = x + y * map.width;
                 pos_array.Add(new Vector3Int(x + offset.x, y + offset.y, 0));
-                tile_array.Add(tile_dict[map[x, y]]);
-                prev_map[x, y] = map[x, y];
+                tile_array.Add(tile_dict[map.map[index]]);
+                prev_map.map[index] = map.map[index];
             }
         }
         int passes = 0;
@@ -73,16 +73,15 @@ public class MapVisual : MonoBehaviour
         generating = false;
     }
 
-    private bool IdenticalMaps(TileID[,] map1, TileID[,] map2)
+    private bool IdenticalMaps(TileInfo map1, TileInfo map2)
     {
-        if (map1.GetLength(0) != map2.GetLength(0) ||
-            map1.GetLength(1) != map2.GetLength(1))
+        if (map1.width != map2.width ||
+            map1.height != map2.height)
             return false;
-        for(int x = 0; x < map1.GetLength(0); x++)
-            for (int y = 0; y < map1.GetLength(1); y++)
-                if (map1[x, y] != map2[x, y])
+        for (int x = 0; x < map1.width; x++)
+            for (int y = 0; y < map1.height; y++)
+                if (map1.map[x + y * map1.width] != map2.map[x + y * map2.width])
                     return false;
-
         return true;
     }
 
@@ -92,8 +91,8 @@ public class MapVisual : MonoBehaviour
     /// <returns>Bool if map is valid</returns>
     private bool ValidMap()
     {
-        if (map_gen.cur_output.GetLength(0) == 0 ||
-            map_gen.cur_output.GetLength(1) == 0)
+        if (map_gen.cur_output.width <= 0 ||
+            map_gen.cur_output.height <= 0)
             return false;
         return true;
     }

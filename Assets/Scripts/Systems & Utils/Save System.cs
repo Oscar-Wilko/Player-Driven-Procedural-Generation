@@ -14,10 +14,10 @@ public class SavedImage
 [System.Serializable]
 public class SavedTiles
 {
-    public TileID[,] tiles;
-    public SavedTiles(TileID[,] n_tiles)
+    public TileInfo tiles;
+    public SavedTiles(TileInfo n_info)
     {
-        tiles = n_tiles;
+        tiles = n_info;
     }
 }
 
@@ -55,6 +55,7 @@ public static class SaveSystem
     {
         FolderCheck();
         string saved_data = JsonUtility.ToJson(info, true);
+        Debug.Log(saved_data);
         File.WriteAllText(GetSaveFileLocation(file_name), saved_data);
     }
 
@@ -63,7 +64,7 @@ public static class SaveSystem
     /// </summary>
     /// <param name="info">TileID[,] of 2D tile array</param>
     /// <param name="file_name">String of filename to save with</param>
-    public static void SaveTileInfo(TileID[,] info, string file_name)
+    public static void SaveTileInfo(TileInfo info, string file_name)
     {
         SaveTileInfo(new SavedTiles(info), file_name);
     }

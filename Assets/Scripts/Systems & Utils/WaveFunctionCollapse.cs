@@ -96,7 +96,6 @@ public class WaveFunctionCollapse : MonoBehaviour
             wfc.map[i] = cells[i].biome;
         cur_output = wfc;
 
-        Debug.Log("Finished");
         if (!frame_by_frame && output_stats)
             Debug.Log(
                 "It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the WFC biome map.\n" +

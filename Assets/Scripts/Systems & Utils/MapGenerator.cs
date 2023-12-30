@@ -8,8 +8,20 @@ public class MapGenerator : MonoBehaviour
     [Header("Tweaking Values")]
     public int biome_size;
     public float transition_percentage;
+    [Header("Procedural Factors")]
+    public WaveVariables properties_surface;
+    public int max_perc_height;
+    public int min_perc_height;
+    public WaveVariables properties_cave;
+    public float cave_threshold;
+    public WaveVariables properties_l_clump;
+    public float l_clump_threshold;
+    public WaveVariables properties_s_clump;
+    public float s_clump_threshold;
+    public WaveVariables properties_dots;
+    public float dots_threshold;
     [Header("Tracking Values")]
-    public TileID[,] cur_output = new TileID[0, 0];
+    public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
 
     public IEnumerator GenerateMap(MapInfo info)
@@ -27,7 +39,7 @@ public class MapGenerator : MonoBehaviour
         t_exp += Time.realtimeSinceStartup - t_pre;
         // Convert biome array to map
         t_pre = Time.realtimeSinceStartup;
-        TileID[,] t_map = ConvertBiomesToMap(b_map);
+        TileInfo t_map = ConvertBiomesToMap(b_map);
         t_con += Time.realtimeSinceStartup - t_pre;
 
         cur_output = t_map;
@@ -181,73 +193,280 @@ public class MapGenerator : MonoBehaviour
         return corners;
     }
 
-    private TileID[,] ConvertBiomesToMap(Biome[,] inp_map)
+    private TileInfo ConvertBiomesToMap(Biome[,] inp_map)
     {
-        TileID[,] map = new TileID[inp_map.GetLength(0), inp_map.GetLength(1)];
+        TileInfo tiles = new TileInfo();
+        tiles.map = new TileID[inp_map.GetLength(0) * inp_map.GetLength(1)];
+        tiles.width = inp_map.GetLength(0);
+        tiles.height = inp_map.GetLength(1);
+
+        ProceduralLayers layers = GenerateLayers(inp_map.GetLength(0), inp_map.GetLength(1));
 
         for (int x = 0; x < inp_map.GetLength(0); x++)
             for (int y = 0; y < inp_map.GetLength(1); y++)
-                map[x, y] = BiomeToTile(inp_map[x, y]);
+                tiles.map[x + y * tiles.width] = BiomeToTile(inp_map[x, y], new Vector2Int(x,y), layers);
 
-        return map;
+        return tiles;
     }
 
-    private TileID BiomeToTile(Biome biome)
+    private TileID BiomeToTile(Biome biome, Vector2Int pos, ProceduralLayers layers)
     {
-        // WILL BE DONE CORRECTLY LATER
-        int rand;
         switch (biome)
         {
-            case Biome.None:
-                return TileID.None;
-            case Biome.Stone:
-                rand = Random.Range(0,3);
-                if (rand == 0)
-                    return TileID.Stone;
-                else if (rand == 1)
-                    return TileID.Cobblestone;
-                else if (rand == 2)
-                    return TileID.Gravel;
-                else
-                    return TileID.Stone;
-            case Biome.Surface:
-                rand = Random.Range(0, 3);
-                if (rand == 0)
-                    return TileID.Grass;
-                else if (rand == 1)
-                    return TileID.Dirt;
-                else if (rand == 2)
-                    return TileID.Gravel;
-                else
-                    return TileID.Dirt;
-            case Biome.Ice:
-                return TileID.Ice;
-            case Biome.Desert:
-                rand = Random.Range(0, 3);
-                if (rand == 0)
-                    return TileID.Sand;
-                else if (rand == 1)
-                    return TileID.HardSand;
-                else
-                    return TileID.Sand;
-            case Biome.Fire:
-                rand = Random.Range(0, 3);
-                if (rand == 0)
-                    return TileID.Molten;
-                else if (rand == 1)
-                    return TileID.Magma;
-                else
-                    return TileID.Molten;
-            case Biome.Wind:
-                rand = Random.Range(0, 3);
-                if (rand == 0)
-                    return TileID.Cloud;
-                else if (rand == 1)
-                    return TileID.Air;
-                else
-                    return TileID.Cloud;
-            default:
-                return TileID.None;
+            case Biome.None:        return TileID.None;
+            case Biome.Standard:    return StandardGeneration(pos, layers);
+            case Biome.Frozen:      return FrozenGeneration(pos, layers);
+            case Biome.Desert:      return DesertGeneration(pos, layers);
+            case Biome.Swamp:       return SwampGeneration(pos, layers);
+            case Biome.Rocky:       return RockyGeneration(pos, layers);
+            case Biome.SharpRocky:  return SharpRockyGeneration(pos, layers);
+            case Biome.Lava:        return LavaGeneration(pos, layers);
+            case Biome.Water:       return WaterGeneration(pos, layers);
+            case Biome.Ocean:       return OceanGeneration(pos, layers);
+            case Biome.Jungle:      return JungleGeneration(pos, layers);
+            case Biome.Radioactive: return RadioactiveGeneration(pos, layers);
+            case Biome.Lushious:    return LushiousGeneration(pos, layers);
         }
+        return TileID.None;
+    }
+
+    #region Biome Generation
+    private TileID StandardGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Grass;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Gravel;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.LowValOre;
+            else
+                return Random.Range(0, 100) > 80 ? TileID.Stone : TileID.Dirt;
+        }
+    }
+
+    private TileID FrozenGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
+            return TileID.None;
+        // In Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            if (pos.y + 1 >= (int)layers.layer_cave.GetLength(1))
+                return TileID.None;
+            else if (!layers.layer_cave[pos.x, pos.y + 1] && Random.Range(0,100) > 70)
+                return TileID.Icicles;
+            else
+                return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Snow;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.HardIce;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.ColdWater;
+            else
+                return TileID.Ice;
+        }
+    }
+
+    private TileID DesertGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Sand;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.HardSand;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.BurriedItem;
+            else
+                return TileID.Sand;
+        }
+    }
+
+    private TileID SwampGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Mud;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Gravel;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Dirt;
+        }
+    }
+
+    private TileID RockyGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Cobblestone;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Gravel;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.LowValOre;
+            else
+                return TileID.Stone;
+        }
+    }
+
+    private TileID SharpRockyGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Cobblestone;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Gravel;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.LowValOre;
+            else
+                return TileID.Stone;
+        }
+    }
+
+    private TileID LavaGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Magma;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Magma;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.Obsidian;
+            else
+                return TileID.Molten;
+        }
+    }
+
+    private TileID WaterGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        return TileID.Water;
+    }
+
+    private TileID OceanGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        return TileID.Water;
+    }
+
+    private TileID JungleGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] + 1 || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x] + 1)
+            return Random.Range(0,100) > 80 ? TileID.Bushes : TileID.None;
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Grass;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Gravel;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Stone;
+        }
+    }
+
+    private TileID RadioactiveGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Cobblestone;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.RadioactiveBlock;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.HighValOre;
+            else
+                return TileID.Stone;
+        }
+    }
+
+    private TileID LushiousGeneration(Vector2Int pos, ProceduralLayers layers)
+    {
+        // Above Surface or in cave
+        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+            return TileID.None;
+        // Surface
+        else if (pos.y == (int)layers.surface_height[pos.x])
+            return TileID.Grass;
+        // Below Surface and out cave
+        else
+        {
+            if (layers.layer_large_clump[pos.x, pos.y])
+                return TileID.Dirt;
+            else if (layers.layer_small_clump[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Stone;
+        }
+    }
+    #endregion
+
+    private ProceduralLayers GenerateLayers(int size_x, int size_y)
+    {
+        ProceduralLayers layers = new ProceduralLayers();
+
+        Vector2Int size = new Vector2Int(size_x,size_y);
+        layers.surface_height       = Noise.Generate1DLevels(size_x, properties_surface);
+        for (int i = 0; i < size_x; i++)
+        {
+            layers.surface_height[i] = ((max_perc_height-min_perc_height)*0.01f) * size_y * layers.surface_height[i] + (min_perc_height*0.01f) * size_y;
+        }
+        layers.layer_cave           = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_cave), cave_threshold);
+        layers.layer_large_clump    = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
+        layers.layer_small_clump    = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_s_clump),s_clump_threshold);
+        layers.layer_dots           = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_dots), dots_threshold);
+
+        return layers;
     }
 }

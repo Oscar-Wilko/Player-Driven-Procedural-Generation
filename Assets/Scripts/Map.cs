@@ -10,22 +10,6 @@ public struct TileAsset
     public string name;
 }
 
-[System.Serializable]
-public struct WaveVariables
-{
-    [Range(0, 50)]
-    public int octaves;
-    public float frequency;
-    [Range(100000, 10000000)]
-    public int seed;
-    [Range(0.0f, 1.0f)]
-    public float persistance;
-    [Range(0.0f, 1.0f)]
-    public float lacunarity;
-    public Vector2 scale;
-    public Vector2 offset;
-}
-
 public class Map : MonoBehaviour
 {
     [Header("Wave Variables")]
