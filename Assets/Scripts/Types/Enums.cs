@@ -48,7 +48,8 @@ public enum TileID
     ColdWater = 25,
     Icicles = 26,
     Snow = 27,
-    Water = 28
+    Water = 28,
+    Wall = 29
 }
 
 public enum Direction

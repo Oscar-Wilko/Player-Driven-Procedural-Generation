@@ -15,6 +15,7 @@ public class CamController : MonoBehaviour
     public float cam_offset;
     public float cam_scaling;
     public float cam_speed;
+    public float scroll_factor;
 
     private void Awake()
     {
@@ -25,7 +26,10 @@ public class CamController : MonoBehaviour
     private void Update()
     {
         if (can_move)
+        {
             CheckMove();
+            CheckZoom();
+        }
     }
 
     private void CheckMove()
@@ -33,6 +37,11 @@ public class CamController : MonoBehaviour
         Vector3 move_vec = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"),0);
         move_vec *= cam_speed * Time.deltaTime;
         transform.position += move_vec;
+    }
+
+    private void CheckZoom()
+    {
+        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize - Input.mouseScrollDelta.y * scroll_factor, 1, 30);
     }
 
     public void SetCamState(int state)

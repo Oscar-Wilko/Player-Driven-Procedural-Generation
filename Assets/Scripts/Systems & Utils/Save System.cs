@@ -55,7 +55,6 @@ public static class SaveSystem
     {
         FolderCheck();
         string saved_data = JsonUtility.ToJson(info, true);
-        Debug.Log(saved_data);
         File.WriteAllText(GetSaveFileLocation(file_name), saved_data);
     }
 

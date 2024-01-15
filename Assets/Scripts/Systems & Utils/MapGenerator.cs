@@ -8,6 +8,10 @@ public class MapGenerator : MonoBehaviour
     [Header("Tweaking Values")]
     public int biome_size;
     public float transition_percentage;
+    public bool frame_by_frame;
+    public bool loop_generating;
+    public bool output_stats;
+
     [Header("Procedural Factors")]
     public WaveVariables properties_surface;
     public int max_perc_height;
@@ -20,33 +24,80 @@ public class MapGenerator : MonoBehaviour
     public float s_clump_threshold;
     public WaveVariables properties_dots;
     public float dots_threshold;
+
     [Header("Tracking Values")]
     public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
+
 
     public IEnumerator GenerateMap(MapInfo info)
     {
         if (generating)
             yield break;
+
         // Declare Variables
         float t = Time.realtimeSinceStartup;
         float t_pre; float t_exp = 0; float t_con = 0;
         generating = true;
+        TileInfo tiles = new TileInfo(0,0);
 
         // Expand biome array with transitions
         t_pre = Time.realtimeSinceStartup;
         Biome[,] b_map = ExpandMap(info);
+        Biome[] biome_map_array = new Biome[b_map.GetLength(0) * b_map.GetLength(1)];
+        for (int x = 0; x < b_map.GetLength(0); x ++)
+            for (int y = 0; y < b_map.GetLength(1); y ++)
+                biome_map_array[x + y * b_map.GetLength(0)] = b_map[x, y];
+        tiles.biome_map = biome_map_array;
         t_exp += Time.realtimeSinceStartup - t_pre;
+
         // Convert biome array to map
         t_pre = Time.realtimeSinceStartup;
-        TileInfo t_map = ConvertBiomesToMap(b_map);
+        tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
+        tiles.width = b_map.GetLength(0);
+        tiles.height = b_map.GetLength(1);
+        ProceduralLayers layers = GenerateLayers(b_map.GetLength(0), b_map.GetLength(1));
+        for (int x = 0; x < b_map.GetLength(0); x++)
+        {
+            for (int y = 0; y < b_map.GetLength(1); y++)
+            {
+                tiles.map[x + y * tiles.width] = BiomeToTile(b_map[x, y], new Vector2Int(x, y), layers);
+            }
+            if (frame_by_frame && x % 100 == 0)
+            {
+                cur_output = tiles;
+                yield return new WaitForEndOfFrame();
+            }
+        }
         t_con += Time.realtimeSinceStartup - t_pre;
 
-        cur_output = t_map;
-        generating = false;
-        Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate map from biome map.\n" +
+        cur_output = tiles;
+        ScrambleSeeds();
+        // Repeat if looping enabled
+        if (!frame_by_frame && output_stats)
+            Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate map from biome map.\n" +
             "Expanding map took " + t_exp + " seconds. Converting map took " + t_con + " seconds.");
+
+        if (loop_generating)
+        {
+            yield return new WaitForEndOfFrame();
+            generating = false;
+            StartCoroutine(GenerateMap(info));
+        }
+        else
+        {
+            generating = false;
+        }
         yield break;
+    }
+
+    private void ScrambleSeeds()
+    {
+        properties_surface.seed = (properties_surface.seed * 71984146) % 10000000;
+        properties_cave.seed = (properties_cave.seed * 51984846) % 10000000;
+        properties_l_clump.seed = (properties_l_clump.seed * 51284146) % 10000000;
+        properties_s_clump.seed = (properties_s_clump.seed * 51684146) % 10000000;
+        properties_dots.seed = (properties_dots.seed * 51984166) % 10000000;
     }
 
     private Biome[,] ExpandMap(MapInfo inp_map)
@@ -193,22 +244,6 @@ public class MapGenerator : MonoBehaviour
         return corners;
     }
 
-    private TileInfo ConvertBiomesToMap(Biome[,] inp_map)
-    {
-        TileInfo tiles = new TileInfo();
-        tiles.map = new TileID[inp_map.GetLength(0) * inp_map.GetLength(1)];
-        tiles.width = inp_map.GetLength(0);
-        tiles.height = inp_map.GetLength(1);
-
-        ProceduralLayers layers = GenerateLayers(inp_map.GetLength(0), inp_map.GetLength(1));
-
-        for (int x = 0; x < inp_map.GetLength(0); x++)
-            for (int y = 0; y < inp_map.GetLength(1); y++)
-                tiles.map[x + y * tiles.width] = BiomeToTile(inp_map[x, y], new Vector2Int(x,y), layers);
-
-        return tiles;
-    }
-
     private TileID BiomeToTile(Biome biome, Vector2Int pos, ProceduralLayers layers)
     {
         switch (biome)
@@ -233,9 +268,12 @@ public class MapGenerator : MonoBehaviour
     #region Biome Generation
     private TileID StandardGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
@@ -256,14 +294,14 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
-        // In Cave
+        // Cave
         else if (layers.layer_cave[pos.x, pos.y])
             if (pos.y + 1 >= (int)layers.layer_cave.GetLength(1))
-                return TileID.None;
+                return TileID.Wall;
             else if (!layers.layer_cave[pos.x, pos.y + 1] && Random.Range(0,100) > 70)
                 return TileID.Icicles;
             else
-                return TileID.None;
+                return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Snow;
@@ -281,9 +319,12 @@ public class MapGenerator : MonoBehaviour
 
     private TileID DesertGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x,pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Sand;
@@ -301,9 +342,12 @@ public class MapGenerator : MonoBehaviour
 
     private TileID SwampGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Mud;
@@ -322,8 +366,11 @@ public class MapGenerator : MonoBehaviour
     private TileID RockyGeneration(Vector2Int pos, ProceduralLayers layers)
     {
         // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
@@ -341,9 +388,12 @@ public class MapGenerator : MonoBehaviour
 
     private TileID SharpRockyGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
@@ -362,8 +412,11 @@ public class MapGenerator : MonoBehaviour
     private TileID LavaGeneration(Vector2Int pos, ProceduralLayers layers)
     {
         // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Magma;
@@ -392,8 +445,11 @@ public class MapGenerator : MonoBehaviour
     private TileID JungleGeneration(Vector2Int pos, ProceduralLayers layers)
     {
         // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] + 1 || layers.layer_cave[pos.x, pos.y])
+        if (pos.y > (int)layers.surface_height[pos.x] + 1)
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x] + 1)
             return Random.Range(0,100) > 80 ? TileID.Bushes : TileID.None;
@@ -413,9 +469,12 @@ public class MapGenerator : MonoBehaviour
 
     private TileID RadioactiveGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
@@ -433,9 +492,12 @@ public class MapGenerator : MonoBehaviour
 
     private TileID LushiousGeneration(Vector2Int pos, ProceduralLayers layers)
     {
-        // Above Surface or in cave
-        if (pos.y > (int)layers.surface_height[pos.x] || layers.layer_cave[pos.x, pos.y])
+        // Above Surface
+        if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+        // Cave
+        else if (layers.layer_cave[pos.x, pos.y])
+            return TileID.Wall;
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
@@ -462,11 +524,24 @@ public class MapGenerator : MonoBehaviour
         {
             layers.surface_height[i] = ((max_perc_height-min_perc_height)*0.01f) * size_y * layers.surface_height[i] + (min_perc_height*0.01f) * size_y;
         }
-        layers.layer_cave           = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_cave), cave_threshold);
-        layers.layer_large_clump    = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
-        layers.layer_small_clump    = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_s_clump),s_clump_threshold);
-        layers.layer_dots           = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_dots), dots_threshold);
+
+        layers.layer_cave           = PCGUtilities.ThresholdPass(
+            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), cave_threshold);
+
+        layers.layer_large_clump    = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
+
+        layers.layer_small_clump    = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_s_clump),s_clump_threshold);
+
+        layers.layer_dots           = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_dots), dots_threshold);
 
         return layers;
+    }
+
+    public bool Looping()
+    {
+        return generating && (frame_by_frame || loop_generating);
     }
 }

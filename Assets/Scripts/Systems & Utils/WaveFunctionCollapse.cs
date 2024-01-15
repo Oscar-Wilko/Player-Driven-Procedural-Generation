@@ -345,5 +345,10 @@ public class WaveFunctionCollapse : MonoBehaviour
             }
         return 0;
     }
+
+    public bool Looping()
+    {
+        return generating && (frame_by_frame || loop_generating);
+    }
     #endregion
 }

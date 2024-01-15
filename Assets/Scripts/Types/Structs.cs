@@ -97,11 +97,13 @@ public struct TileDictionaryInstance
 public struct TileInfo
 {
     public TileID[] map;
+    public Biome[] biome_map;
     public int width;
     public int height;
     public TileInfo(int x, int y)
     {
         map = new TileID[x * y];
+        biome_map = new Biome[x * y];
         width = x;
         height = y;
     }

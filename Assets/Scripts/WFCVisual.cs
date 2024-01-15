@@ -2,18 +2,19 @@ using UnityEngine;
 
 public class WFCVisual : MonoBehaviour
 {
-    // References
     [Header("References")]
     public WaveFunctionCollapse wfc;
     private SpriteRenderer sprite;
     public DrawCanvas canvas;
-    // Tweaks
+
     [Header("Tweaking Variables")]
     public Vector2Int size;
-    // Rules
+
     [Header("Rulesets")]
     public Ruleset default_ruleset;
     public Ruleset test_ruleset;
+
+    private bool new_gen = false;
 
     public void Awake()
     {
@@ -23,11 +24,13 @@ public class WFCVisual : MonoBehaviour
     public void Update()
     {
         // Valid Output
-        if (ValidMap())
+        if (ValidMap() && new_gen)
         {
             sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
-                new Rect(0, 0, size.x, size.y),
+                new Rect(0, 0, wfc.cur_output.width, wfc.cur_output.height),
                 new Vector2(0.5f, 0.5f), PPU());
+            if (!wfc.Looping())
+                new_gen = false;
         }
     }
 
@@ -53,6 +56,7 @@ public class WFCVisual : MonoBehaviour
             Debug.LogError("Invalid WFC Output Size");
             return;
         }
+        new_gen = true;
         wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
         test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size, false);
     }
@@ -74,6 +78,7 @@ public class WFCVisual : MonoBehaviour
         SavedImage data = SaveSystem.LoadImageInfo("map");
         if (data == null)
             return;
+        new_gen = true;
         wfc.cur_output = data.info;
     }
 

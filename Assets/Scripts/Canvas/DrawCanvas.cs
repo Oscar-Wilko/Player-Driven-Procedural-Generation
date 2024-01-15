@@ -1,30 +1,29 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class DrawCanvas : MonoBehaviour
 {
-    // Refs
     [Header("References")]
     public RectTransform palette_transform;
     public GameObject palette_instance;
     public Texture2D referenced_texture;
-    private SpriteRenderer sprite;
-    
-    // Consts
-    private Vector2Int[] fill_directions = { new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(-1,0), new Vector2Int(0,-1) };
+    private SpriteRenderer sprite;    
 
-    // Balancing Variables
     [Header("Tweak Variables")]
     public float reference_scaling;
     public float texture_pixels_per_unit;
     public Vector2Int texture_size;
     public BiomePixel[] biome_palette;
 
-    // Trackers
+    [Header("Trackers")]
     public bool active;
     private BiomePixel selected_pixel;
     private Biome[] current_map;
+
+    // Consts
+    private Vector2Int[] fill_directions = { new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(-1,0), new Vector2Int(0,-1) };
 
     public void Awake()
     {
@@ -206,6 +205,14 @@ public class DrawCanvas : MonoBehaviour
             if (pixel.biome == biome) 
                 return pixel;
         return biome_palette[0];
+    }
+
+    public Dictionary<Biome, Color> BiomeDict()
+    {
+        Dictionary<Biome, Color> dict = new Dictionary<Biome, Color>();
+        foreach (BiomePixel pixel in biome_palette)
+            dict.Add(pixel.biome, pixel.colour);
+        return dict;
     }
 
     /// <summary>
