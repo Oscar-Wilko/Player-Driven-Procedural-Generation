@@ -18,7 +18,7 @@ public class MapVisual : MonoBehaviour
     public Color biome_wall_mult;
 
     [Header("Tracking Values")]
-    public TileInfo prev_map = new TileInfo(0,0);
+    private TileInfo prev_map = new TileInfo(0,0);
     private bool generating = false;
     private bool new_gen = false;
     private Dictionary<Biome, Color> biome_dict;

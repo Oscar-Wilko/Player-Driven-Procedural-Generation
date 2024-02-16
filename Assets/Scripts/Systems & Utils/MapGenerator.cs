@@ -29,15 +29,23 @@ public class MapGenerator : MonoBehaviour
     public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
 
+    private ProgressBar progress;
+
+    private void Awake()
+    {
+        progress = FindObjectOfType<ProgressBar>();
+    }
 
     public IEnumerator GenerateMap(MapInfo info)
     {
         if (generating)
             yield break;
 
+        progress.SetProgressAmount(0.0f);
+
         // Declare Variables
         float t = Time.realtimeSinceStartup;
-        float t_pre; float t_exp = 0; float t_con = 0;
+        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0;
         generating = true;
         TileInfo tiles = new TileInfo(0,0);
 
@@ -49,16 +57,57 @@ public class MapGenerator : MonoBehaviour
             for (int y = 0; y < b_map.GetLength(1); y ++)
                 biome_map_array[x + y * b_map.GetLength(0)] = b_map[x, y];
         tiles.biome_map = biome_map_array;
-        t_exp += Time.realtimeSinceStartup - t_pre;
+        t_exp = Time.realtimeSinceStartup - t_pre;
+
+        progress.SetProgressAmount(0.2f);
+        yield return new WaitForEndOfFrame();
 
         // Convert biome array to map
-        t_pre = Time.realtimeSinceStartup;
+        t_lay = Time.realtimeSinceStartup;
         tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
         tiles.width = b_map.GetLength(0);
         tiles.height = b_map.GetLength(1);
-        ProceduralLayers layers = GenerateLayers(b_map.GetLength(0), b_map.GetLength(1));
+        //ProceduralLayers layers = GenerateLayers(b_map.GetLength(0), b_map.GetLength(1));
+
+        ProceduralLayers layers = new ProceduralLayers();
+
+        Vector2Int size = new Vector2Int(b_map.GetLength(0), b_map.GetLength(1));
+        layers.surface_height = Noise.Generate1DLevels(size.x, properties_surface);
+        for (int i = 0; i < size.x; i++)
+            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size.y 
+                * layers.surface_height[i] + (min_perc_height * 0.01f) * size.y;
+
+        layers.layer_cave = PCGUtilities.ThresholdPass(
+            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0, 0), 
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, true, true, true), cave_threshold);
+
+        progress.SetProgressAmount(0.3f);
+        yield return new WaitForEndOfFrame();
+        layers.layer_large_clump = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
+
+        progress.SetProgressAmount(0.4f);
+        yield return new WaitForEndOfFrame();
+        layers.layer_small_clump = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_s_clump), s_clump_threshold);
+
+        progress.SetProgressAmount(0.5f);
+        yield return new WaitForEndOfFrame();
+        layers.layer_dots = PCGUtilities.ThresholdPass(
+            Noise.Generate2DLevels(size, properties_dots), dots_threshold);
+
+        progress.SetProgressAmount(0.6f);
+        yield return new WaitForEndOfFrame();
+
+        t_lay = Time.realtimeSinceStartup - t_lay;
+        t_pre = Time.realtimeSinceStartup;
         for (int x = 0; x < b_map.GetLength(0); x++)
         {
+            if (x % 64 == 0)
+            {
+                progress.SetProgressAmount(0.6f + (float)x / b_map.GetLength(0) * 0.4f);
+                yield return new WaitForEndOfFrame();
+            }
             for (int y = 0; y < b_map.GetLength(1); y++)
             {
                 tiles.map[x + y * tiles.width] = BiomeToTile(b_map[x, y], new Vector2Int(x, y), layers);
@@ -69,14 +118,14 @@ public class MapGenerator : MonoBehaviour
                 yield return new WaitForEndOfFrame();
             }
         }
-        t_con += Time.realtimeSinceStartup - t_pre;
-
+        t_con = Time.realtimeSinceStartup - t_pre;
+        progress.SetVisible(false);
         cur_output = tiles;
         ScrambleSeeds();
         // Repeat if looping enabled
         if (!frame_by_frame && output_stats)
             Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate map from biome map.\n" +
-            "Expanding map took " + t_exp + " seconds. Converting map took " + t_con + " seconds.");
+            "Expanding map took " + t_exp + " seconds. Making layers took " + t_lay + " seconds. Converting map took " + t_con + " seconds.");
 
         if (loop_generating)
         {
@@ -260,7 +309,7 @@ public class MapGenerator : MonoBehaviour
             case Biome.Ocean:       return OceanGeneration(pos, layers);
             case Biome.Jungle:      return JungleGeneration(pos, layers);
             case Biome.Radioactive: return RadioactiveGeneration(pos, layers);
-            case Biome.Lushious:    return LushiousGeneration(pos, layers);
+            case Biome.Luscious:    return LushiousGeneration(pos, layers);
         }
         return TileID.None;
     }
@@ -522,11 +571,13 @@ public class MapGenerator : MonoBehaviour
         layers.surface_height       = Noise.Generate1DLevels(size_x, properties_surface);
         for (int i = 0; i < size_x; i++)
         {
-            layers.surface_height[i] = ((max_perc_height-min_perc_height)*0.01f) * size_y * layers.surface_height[i] + (min_perc_height*0.01f) * size_y;
+            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size_y * 
+                layers.surface_height[i] + (min_perc_height * 0.01f) * size_y;
         }
 
         layers.layer_cave           = PCGUtilities.ThresholdPass(
-            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), cave_threshold);
+            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), 
+            new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), cave_threshold);
 
         layers.layer_large_clump    = PCGUtilities.ThresholdPass(
             Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
@@ -544,4 +595,6 @@ public class MapGenerator : MonoBehaviour
     {
         return generating && (frame_by_frame || loop_generating);
     }
+
+    public void UpdateBiomeSize(int new_size) => biome_size = new_size;
 }

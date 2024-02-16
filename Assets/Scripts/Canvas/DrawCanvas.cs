@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.XR;
+using static UnityEditor.PlayerSettings;
 
 public class DrawCanvas : MonoBehaviour
 {
     [Header("References")]
-    public RectTransform palette_transform;
+    public RectTransform[] palette_transforms;
     public GameObject palette_instance;
     public Texture2D referenced_texture;
     private SpriteRenderer sprite;    
@@ -19,8 +21,12 @@ public class DrawCanvas : MonoBehaviour
 
     [Header("Trackers")]
     public bool active;
-    private BiomePixel selected_pixel;
+    public BiomePixel selected_pixel;
     private Biome[] current_map;
+
+    [Header("Events")]
+    public UnityEvent<int> SizeChangedX;
+    public UnityEvent<int> SizeChangedY;
 
     // Consts
     private Vector2Int[] fill_directions = { new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(-1,0), new Vector2Int(0,-1) };
@@ -80,12 +86,15 @@ public class DrawCanvas : MonoBehaviour
     /// </summary>
     private void GeneratePalette()
     {
-        palette_transform.sizeDelta = new Vector2(palette_transform.sizeDelta.x,
-            biome_palette.Length * palette_instance.GetComponent<RectTransform>().rect.height + (biome_palette.Length + 1) * 8);
-        foreach (BiomePixel pixel in biome_palette)
+        for (int i = 0; i < palette_transforms.Length; i++)
         {
-            GameObject instance = Instantiate(palette_instance, palette_transform);
-            instance.GetComponent<BiomePaletteInstance>().GenerateInstance(pixel, this);
+            palette_transforms[i].sizeDelta = new Vector2(palette_transforms[i].sizeDelta.x,
+                biome_palette.Length * palette_instance.GetComponent<RectTransform>().rect.height + (biome_palette.Length + 1) * 8);
+            foreach (BiomePixel pixel in biome_palette)
+            {
+                GameObject instance = Instantiate(palette_instance, palette_transforms[i]);
+                instance.GetComponent<BiomePaletteInstance>().GenerateInstance(pixel, this);
+            }
         }
     }
     #endregion
@@ -292,6 +301,39 @@ public class DrawCanvas : MonoBehaviour
         float y_ratio = texture_size.y * (3f / 16);
         return Mathf.Max(x_ratio, y_ratio);
     }
+
+    private void CropTextureSize(Vector2Int new_size)
+    {
+        Biome[] new_map = new Biome[new_size.x * new_size.y];
+        for(int x = 0; x < new_size.x; x++)
+        {
+            if (x >= texture_size.x)
+                continue;
+            for (int y = 0; y < new_size.y; y++)
+            {
+                if (y >= texture_size.y)
+                    continue;
+                if (x + y * texture_size.x >= current_map.Length)
+                    Debug.Log(x + y * texture_size.x);
+                new_map[x + y * new_size.x] = current_map[x + y * texture_size.x];
+            }
+        }
+        texture_size = new_size;
+        current_map = new_map;
+
+        // Get Texture of current raw image
+        Texture2D base_texture = new Texture2D(new_size.x, new_size.y);
+        base_texture.filterMode = FilterMode.Point;
+        Color[] pixels = MapToColours(new_map);
+
+        // Update sprite to new pixels
+        base_texture.SetPixels(pixels);
+        base_texture.Apply();
+
+        sprite.sprite = Sprite.Create(base_texture,
+            new Rect(0, 0, texture_size.x, texture_size.y),
+            new Vector2(0.5f, 0.5f), PPU());
+    }
     #endregion
     #region Map Conversion
     /// <summary>
@@ -343,7 +385,7 @@ public class DrawCanvas : MonoBehaviour
     /// Export image information on current canvas
     /// </summary>
     /// <returns>ImageInformation of image</returns>
-    public MapInfo ExportImage()
+    private MapInfo ExportImage()
     {
         Texture2D texture = sprite.sprite.texture;
         MapInfo info = new MapInfo();
@@ -357,9 +399,11 @@ public class DrawCanvas : MonoBehaviour
     /// Import map info onto canvas
     /// </summary>
     /// <param name="info">MapInfo of imported map information</param>
-    public void ImportImage(MapInfo info)
+    private void ImportImage(MapInfo info)
     {
         current_map = info.map;
+        SizeChangedX.Invoke(info.width);
+        SizeChangedY.Invoke(info.height);
         texture_size = new Vector2Int(info.width, info.height);
         Texture2D texture = new Texture2D(info.width, info.height);
         texture.filterMode = FilterMode.Point;
@@ -374,9 +418,11 @@ public class DrawCanvas : MonoBehaviour
     /// Import texture onto canvas
     /// </summary>
     /// <param name="texture">Texture2D of imported texture</param>
-    public void ImportTexture(Texture2D texture)
+    private void ImportTexture(Texture2D texture)
     {
         current_map = TextureToBiomes(texture);
+        SizeChangedX.Invoke(texture.width);
+        SizeChangedY.Invoke(texture.height);
         texture_size = new Vector2Int(texture.width, texture.height);
         Texture2D n_texture = new Texture2D(texture.width, texture.height);
         n_texture.filterMode = FilterMode.Point;
@@ -390,40 +436,17 @@ public class DrawCanvas : MonoBehaviour
     #region Quick Functions
     public void SetPalettePixel(BiomePixel pixel) { selected_pixel = pixel; }
     public Biome[] BiomeMap() { return current_map; }
-
-    /// <summary>
-    /// Reset to default
-    /// </summary>
-    public void Reset()
-    {
-        GenerateSprite();
-    }
-
-    /// <summary>
-    /// Save using save system
-    /// </summary>
-    public void SaveCanvas()
-    {
-        SaveSystem.SaveImageInfo(ExportImage(), "canvas");
-    }
-
-    /// <summary>
-    /// Load using load system
-    /// </summary>
+    public void Reset() => GenerateSprite();
+    public void ChangeSizeX(int new_size) => CropTextureSize(new Vector2Int(new_size, texture_size.y));
+    public void ChangeSizeY(int new_size) => CropTextureSize(new Vector2Int(texture_size.x, new_size));
+    public void SaveCanvas() => SaveSystem.SaveImageInfo(ExportImage(), "canvas");
+    public void LoadTexture() => ImportTexture(referenced_texture);
     public void LoadCanvas()
     {
         SavedImage data = SaveSystem.LoadImageInfo("canvas");
         if (data == null)
             return;
         ImportImage(data.info);
-    }
-
-    /// <summary>
-    /// Load texture onto canvas
-    /// </summary>
-    public void LoadTexture()
-    {
-        ImportTexture(referenced_texture);
     }
     #endregion
 }

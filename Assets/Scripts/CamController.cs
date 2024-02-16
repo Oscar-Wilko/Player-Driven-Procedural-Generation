@@ -5,21 +5,35 @@ using UnityEngine;
 public class CamController : MonoBehaviour
 {
     [Header("References")]
-    public CanvasGroup state_1_group;
-    public CanvasGroup state_2_group;
+    public CanvasGroup canvas_group;
+    public CanvasGroup wfc_group;
+    public CanvasGroup map_group;
+    [Space]
     public DrawCanvas draw_canvas;
+    public WFCVisual wfc_canvas;
+    [Space]
+    public SpriteRenderer canvas_visual;
+    public SpriteRenderer wfc_visual;
+    public SpriteRenderer map_visual;
+    [Space]
+    public RectTransform focus;
+    public RectTransform side_focus;
     private Camera cam;
     [Header("Tracking Values")]
     private bool can_move = false;
+    private Vector2 mouse_pos = Vector2.zero;
     [Header("Tweaking Values")]
     public float cam_offset;
-    public float cam_scaling;
     public float cam_speed;
+    public float cam_speed_mouse;
     public float scroll_factor;
 
     private void Awake()
     {
         cam = GetComponent<Camera>();
+        canvas_group.gameObject.SetActive(true);
+        wfc_group.gameObject.SetActive(true);
+        map_group.gameObject.SetActive(true);
         SetCamState(0);
     }
 
@@ -30,13 +44,18 @@ public class CamController : MonoBehaviour
             CheckMove();
             CheckZoom();
         }
+        mouse_pos = Input.mousePosition;
     }
 
     private void CheckMove()
     {
         Vector3 move_vec = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"),0);
         move_vec *= cam_speed * Time.deltaTime;
+        Vector3 move_vec_mouse = new Vector3(mouse_pos.x - Input.mousePosition.x, mouse_pos.y - Input.mousePosition.y, 0);
+        move_vec_mouse *= cam_speed_mouse;
         transform.position += move_vec;
+        if (Input.GetMouseButton(0))
+            transform.position += move_vec_mouse * cam.orthographicSize;
     }
 
     private void CheckZoom()
@@ -46,18 +65,57 @@ public class CamController : MonoBehaviour
 
     public void SetCamState(int state)
     {
+        // Update cam variables
+        cam.orthographicSize = 5;
+        can_move = state == 2;
         // Update external components
         draw_canvas.active = state == 0;
+        wfc_canvas.enabled = state == 1;
+        canvas_visual.enabled = state != 2;
+        wfc_visual.enabled = state != 0;
+        map_visual.enabled = state == 2;
+        switch (state)
+        {
+            case 0:
+                canvas_visual.transform.position = FocalPoint(true);
+                canvas_visual.transform.localScale = Vector3.one;
+                break;
+            case 1:
+                canvas_visual.transform.position = FocalPoint(false);
+                wfc_visual.transform.position = FocalPoint(true);
+                canvas_visual.transform.localScale = Vector3.one * 0.25f;
+                wfc_visual.transform.localScale = Vector3.one;
+                break;
+            case 2:
+                wfc_visual.transform.position = FocalPoint(false);
+                map_visual.transform.position = FocalPoint(true);
+                wfc_visual.transform.localScale = Vector3.one * 0.25f;
+                break;
+        }
         // Update alpha, interactability, raycast blocking of UI elements
-        state_1_group.alpha = state == 0 ? 1 : 0;
-        state_1_group.interactable = state == 0;
-        state_1_group.blocksRaycasts = state == 0;
-        state_2_group.alpha = state == 1 ? 1 : 0;
-        state_2_group.interactable = state == 1;
-        state_2_group.blocksRaycasts = state == 1;
-        // Update cam variables
-        transform.position = new Vector3(state == 0 ? 0 : cam_offset,0,-10);
-        cam.orthographicSize = state == 1 ? cam_scaling : 5;
-        can_move = state == 1;
+        UpdateCanvasGroup(canvas_group, state, 0);
+        UpdateCanvasGroup(wfc_group, state, 1);
+        UpdateCanvasGroup(map_group, state, 2);
+    }
+
+    private void UpdateCanvasGroup(CanvasGroup group, int state, int state_req)
+    {
+        group.alpha = state == state_req ? 1 : 0;
+        group.interactable = state == state_req;
+        group.blocksRaycasts = state == state_req;
+    }
+
+    private Vector3 FocalPoint(bool main_focus)
+    {
+        Vector3 point = Camera.main.ScreenToWorldPoint(main_focus ? RectMidPoint(focus) : RectMidPoint(side_focus));
+        point.z = 0;
+        return point;
+    }
+
+    public static Vector3 RectMidPoint(RectTransform rect)
+    {
+        Vector3 point = rect.position;
+        point += new Vector3((0.5f - rect.pivot.x) * rect.sizeDelta.x, (0.5f - rect.pivot.y) * rect.sizeDelta.y);
+        return point;
     }
 }

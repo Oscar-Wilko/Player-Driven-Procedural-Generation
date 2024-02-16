@@ -12,7 +12,7 @@ public enum Biome
     Ocean = 9,
     Jungle = 10,
     Radioactive = 11,
-    Lushious = 12
+    Luscious = 12
 }
 
 /// <summary>

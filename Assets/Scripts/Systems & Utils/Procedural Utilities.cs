@@ -81,11 +81,13 @@ public static class PCGUtilities
     /// <returns>2D boolean array of threshold passes or fails</returns>
     public static bool[,] ThresholdPass(float[,] input_levels, float threshold)
     {
-        bool[,] threshold_levels = new bool[input_levels.GetLength(0), input_levels.GetLength(1)];
-        for (int x = 0; x < input_levels.GetLength(0); x++)
-            for (int y = 0; y < input_levels.GetLength(1); y++)
+        float time = Time.realtimeSinceStartup;
+        Vector2Int size = new Vector2Int(input_levels.GetLength(0), input_levels.GetLength(1));
+        bool[,] threshold_levels = new bool[size.x, size.y];
+        for (int x = 0; x < size.x; x++)
+            for (int y = 0; y < size.y; y++)
                 threshold_levels[x, y] = input_levels[x, y] <= threshold;
-
+        //Debug.Log($"It took {Time.realtimeSinceStartup - time} seconds to calculate the threshold pass.");
         return threshold_levels;
     }
 
