@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class CamController : MonoBehaviour
 {
@@ -39,12 +40,18 @@ public class CamController : MonoBehaviour
 
     private void Update()
     {
-        if (can_move)
+        if (CanMove())
         {
             CheckMove();
             CheckZoom();
         }
         mouse_pos = Input.mousePosition;
+    }
+
+    private bool CanMove()
+    {
+        bool mouse_over_ui = EventSystem.current.IsPointerOverGameObject();
+        return can_move && !mouse_over_ui;
     }
 
     private void CheckMove()

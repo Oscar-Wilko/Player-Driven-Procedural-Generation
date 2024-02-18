@@ -59,3 +59,23 @@ public enum Direction
     Left,
     Right
 }
+
+public enum NoiseType
+{
+    Cave01,
+    Surface01,
+    SmallClump01,
+    LargeClump01,
+    Dots01
+}
+
+public enum NoiseVariable
+{
+    Seed,
+    ScaleX,
+    ScaleY,
+    Octaves,
+    Persistance,
+    Lacunarity,
+    Threshold
+}

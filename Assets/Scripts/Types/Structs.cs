@@ -131,5 +131,7 @@ public struct WaveVariables
     public float lacunarity;
     public Vector2 scale;
     public Vector2 offset;
+    [Range(0.0f, 1.0f)]
+    public float threshold;
 }
 #endregion

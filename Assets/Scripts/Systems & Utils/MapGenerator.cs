@@ -2,9 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class MapGenerator : MonoBehaviour
 {
+    [Header("References")]
+    public NoiseField surface_field;
+    public NoiseField cave_field;
+    public NoiseField large_clump_field;
+    public NoiseField small_clump_field;
+    public NoiseField dots_field;
+    public ValueEditor min_height_editor;
+    public ValueEditor max_height_editor;
+
     [Header("Tweaking Values")]
     public int biome_size;
     public float transition_percentage;
@@ -26,7 +36,7 @@ public class MapGenerator : MonoBehaviour
     public float dots_threshold;
 
     [Header("Tracking Values")]
-    public TileInfo cur_output = new TileInfo(0,0);
+    [HideInInspector] public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
 
     private ProgressBar progress;
@@ -34,6 +44,11 @@ public class MapGenerator : MonoBehaviour
     private void Awake()
     {
         progress = FindObjectOfType<ProgressBar>();
+    }
+
+    private void Start()
+    {
+        InitializeFields();
     }
 
     public IEnumerator GenerateMap(MapInfo info)
@@ -106,16 +121,13 @@ public class MapGenerator : MonoBehaviour
             if (x % 64 == 0)
             {
                 progress.SetProgressAmount(0.6f + (float)x / b_map.GetLength(0) * 0.4f);
+                if (frame_by_frame)
+                    cur_output = tiles;
                 yield return new WaitForEndOfFrame();
             }
             for (int y = 0; y < b_map.GetLength(1); y++)
             {
                 tiles.map[x + y * tiles.width] = BiomeToTile(b_map[x, y], new Vector2Int(x, y), layers);
-            }
-            if (frame_by_frame && x % 100 == 0)
-            {
-                cur_output = tiles;
-                yield return new WaitForEndOfFrame();
             }
         }
         t_con = Time.realtimeSinceStartup - t_pre;
@@ -147,6 +159,11 @@ public class MapGenerator : MonoBehaviour
         properties_l_clump.seed = (properties_l_clump.seed * 51284146) % 10000000;
         properties_s_clump.seed = (properties_s_clump.seed * 51684146) % 10000000;
         properties_dots.seed = (properties_dots.seed * 51984166) % 10000000;
+        surface_field.SetNewSeed(properties_surface.seed);
+        cave_field.SetNewSeed(properties_cave.seed);
+        large_clump_field.SetNewSeed(properties_l_clump.seed);
+        small_clump_field.SetNewSeed(properties_s_clump.seed);
+        dots_field.SetNewSeed(properties_dots.seed);
     }
 
     private Biome[,] ExpandMap(MapInfo inp_map)
@@ -575,18 +592,11 @@ public class MapGenerator : MonoBehaviour
                 layers.surface_height[i] + (min_perc_height * 0.01f) * size_y;
         }
 
-        layers.layer_cave           = PCGUtilities.ThresholdPass(
-            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), 
-            new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), cave_threshold);
-
-        layers.layer_large_clump    = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
-
-        layers.layer_small_clump    = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_s_clump),s_clump_threshold);
-
-        layers.layer_dots           = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_dots), dots_threshold);
+        layers.layer_cave = PCGUtilities.ThresholdPass(PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), 
+            new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), properties_cave.threshold);
+        layers.layer_large_clump = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_l_clump), properties_l_clump.threshold);
+        layers.layer_small_clump = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_s_clump), properties_s_clump.threshold);
+        layers.layer_dots = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_dots), properties_dots.threshold);
 
         return layers;
     }
@@ -596,5 +606,56 @@ public class MapGenerator : MonoBehaviour
         return generating && (frame_by_frame || loop_generating);
     }
 
+    public bool ShowVisual() => !generating || frame_by_frame;
+
     public void UpdateBiomeSize(int new_size) => biome_size = new_size;
+    public void UpdateNoiseValue(NoiseType type, NoiseVariable var, object value)
+    {
+        WaveVariables wave;
+        switch (type)
+        {
+            case NoiseType.Cave01: wave = properties_cave; break;
+            case NoiseType.Surface01: wave = properties_surface; break;
+            case NoiseType.SmallClump01: wave = properties_s_clump; break;
+            case NoiseType.LargeClump01: wave = properties_l_clump; break;
+            case NoiseType.Dots01: wave = properties_dots; break;
+            default: return;
+        }
+        switch (var)
+        {
+            case NoiseVariable.Seed: wave.seed = (int)value; break;
+            case NoiseVariable.ScaleX: wave.scale.x = (float)value; break;
+            case NoiseVariable.ScaleY: wave.scale.y = (float)value; break;
+            case NoiseVariable.Octaves: wave.octaves = (int)value; break;
+            case NoiseVariable.Persistance: wave.persistance = (float)value; break;
+            case NoiseVariable.Lacunarity: wave.lacunarity = (float)value; break;
+            case NoiseVariable.Threshold: wave.threshold = (float)value;
+                Debug.Log("Threshold changed"); break;
+            default: return;
+        }
+        switch (type)
+        {
+            case NoiseType.Cave01: properties_cave = wave; break;
+            case NoiseType.Surface01: properties_surface = wave; break;
+            case NoiseType.SmallClump01: properties_s_clump = wave; break;
+            case NoiseType.LargeClump01: properties_l_clump = wave; break;
+            case NoiseType.Dots01: properties_dots = wave; break;
+            default: return;
+        }
+    }
+
+    public void UpdateSurfaceMinHeight(int perc) => min_perc_height = perc;
+    public void UpdateSurfaceMaxHeight(int perc) => max_perc_height = perc;
+
+    private void InitializeFields()
+    {
+        cave_field.Initialize(properties_cave);
+        surface_field.Initialize(properties_surface);
+        large_clump_field.Initialize(properties_l_clump);
+        small_clump_field.Initialize(properties_s_clump);
+        dots_field.Initialize(properties_dots);
+
+        min_height_editor.UpdateIntValue(min_perc_height);
+        max_height_editor.UpdateIntValue(max_perc_height);
+    }
 }

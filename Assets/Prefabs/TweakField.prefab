@@ -363,7 +363,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Enter text...
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -626,7 +626,7 @@ MonoBehaviour:
   m_fontSizeBase: 12
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 18
+  m_fontSizeMin: 12
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 2
@@ -769,9 +769,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1111496194829474937}
   - component: {fileID: 7171324123391541394}
+  - component: {fileID: 410852527926180013}
   - component: {fileID: 1615489797846870089}
   - component: {fileID: 4354726503673444961}
-  - component: {fileID: 410852527926180013}
   m_Layer: 5
   m_Name: TweakField
   m_TagString: Untagged
@@ -809,6 +809,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6926168556505771300}
   m_CullTransparentMesh: 1
+--- !u!114 &410852527926180013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6926168556505771300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3653741d755dfe47b1c063bc587e805, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  is_float: 0
+  imin_val: 0
+  imax_val: 0
+  idefault_value: 0
+  fmin_val: 0
+  fmax_val: 0
+  fdefault_value: 0
+  val_slider: {fileID: 706442669585135038}
+  val_input: {fileID: 1803867516719893821}
+  IntValueChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  FloatValueChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1615489797846870089
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -865,23 +892,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 1
   m_ChildScaleHeight: 1
   m_ReverseArrangement: 0
---- !u!114 &410852527926180013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6926168556505771300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e3653741d755dfe47b1c063bc587e805, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  min_val: 0
-  max_val: 1
-  default_value: 1
-  val_slider: {fileID: 706442669585135038}
-  val_input: {fileID: 1803867516719893821}
 --- !u!1 &7143854315679068186
 GameObject:
   m_ObjectHideFlags: 0
@@ -1083,9 +1093,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_IgnoreLayout: 0
-  m_MinWidth: 100
+  m_MinWidth: 50
   m_MinHeight: -1
-  m_PreferredWidth: 120
+  m_PreferredWidth: 100
   m_PreferredHeight: -1
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1

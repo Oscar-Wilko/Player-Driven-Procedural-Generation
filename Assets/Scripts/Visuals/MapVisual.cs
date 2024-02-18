@@ -48,7 +48,7 @@ public class MapVisual : MonoBehaviour
 
     private void ShowMap(TileInfo map)
     {
-        if (generating)
+        if (generating || !map_gen.ShowVisual())
             return;
         if (!map_gen.Looping())
             new_gen = false;
