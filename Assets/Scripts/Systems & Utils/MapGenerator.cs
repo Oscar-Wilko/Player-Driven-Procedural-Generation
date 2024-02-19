@@ -154,11 +154,11 @@ public class MapGenerator : MonoBehaviour
 
     private void ScrambleSeeds()
     {
-        properties_surface.seed = (properties_surface.seed * 71984146) % 10000000;
-        properties_cave.seed = (properties_cave.seed * 51984846) % 10000000;
-        properties_l_clump.seed = (properties_l_clump.seed * 51284146) % 10000000;
-        properties_s_clump.seed = (properties_s_clump.seed * 51684146) % 10000000;
-        properties_dots.seed = (properties_dots.seed * 51984166) % 10000000;
+        properties_surface.seed = Mathf.Abs((int)(properties_surface.seed * 4.51f) % 10000000);
+        properties_cave.seed = Mathf.Abs((int)(properties_cave.seed * 5.16f) % 10000000);
+        properties_l_clump.seed = Mathf.Abs((int)(properties_l_clump.seed * 6.84f) % 10000000);
+        properties_s_clump.seed = Mathf.Abs((int)(properties_s_clump.seed * 8.67f) % 10000000);
+        properties_dots.seed = Mathf.Abs((int)(properties_dots.seed * 6.56f) % 10000000);
         surface_field.SetNewSeed(properties_surface.seed);
         cave_field.SetNewSeed(properties_cave.seed);
         large_clump_field.SetNewSeed(properties_l_clump.seed);
