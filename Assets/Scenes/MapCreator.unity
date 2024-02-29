@@ -8820,14 +8820,14 @@ MonoBehaviour:
   output_stats: 1
   properties_surface:
     octaves: 2
-    seed: 2748408
+    seed: 100000
     persistance: 0.5
     lacunarity: 0.8
     scale: {x: 50, y: 1}
     offset: {x: 0, y: 0}
     threshold: 0
-  max_perc_height: 85
-  min_perc_height: 90
+  max_perc_height: 90
+  min_perc_height: 85
   properties_cave:
     octaves: 2
     seed: 9054140
@@ -8839,7 +8839,7 @@ MonoBehaviour:
   cave_threshold: 0.4
   properties_l_clump:
     octaves: 4
-    seed: 0
+    seed: 664249
     persistance: 0.4
     lacunarity: 0.8
     scale: {x: 20, y: 20}
@@ -8864,6 +8864,50 @@ MonoBehaviour:
     offset: {x: 0, y: 0}
     threshold: 0.9
   dots_threshold: 0.9
+  tunnelSurface:
+    seed: 7178756
+    minTunnels: 8
+    maxTunnels: 16
+    minVertexCount: 4
+    maxVertexCount: 14
+    minVertexDist: 20
+    maxVertexDist: 80
+    minRatio: 0.254
+    maxRatio: 0.746
+    thickness: 4
+  tunnelVertical:
+    seed: 1433679
+    minTunnels: 2
+    maxTunnels: 6
+    minVertexCount: 4
+    maxVertexCount: 8
+    minVertexDist: 15.4
+    maxVertexDist: 46.1
+    minRatio: 0.212
+    maxRatio: 0.632
+    thickness: 3
+  tunnelHorizontal:
+    seed: 4152332
+    minTunnels: 2
+    maxTunnels: 4
+    minVertexCount: 6
+    maxVertexCount: 12
+    minVertexDist: 20.5
+    maxVertexDist: 52.8
+    minRatio: 0.181
+    maxRatio: 0.788
+    thickness: 3
+  tunnelFlat:
+    seed: 2613472
+    minTunnels: 2
+    maxTunnels: 4
+    minVertexCount: 5
+    maxVertexCount: 11
+    minVertexDist: 17.4
+    maxVertexDist: 36.4
+    minRatio: 0.036
+    maxRatio: 0.233
+    thickness: 3
   cur_output:
     map: 
     biome_map: 
@@ -11453,6 +11497,37 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1373503756
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1373503757}
+  m_Layer: 0
+  m_Name: <============-CAMERA-============>
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1373503757
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373503756}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1180.5781, y: 572.3063, z: -1.1665764}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1411093457
 GameObject:
   m_ObjectHideFlags: 0
@@ -16191,7 +16266,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2222995546400682197, guid: 111a7027f708d4e4492c3ac6f9f38269, type: 3}
       propertyPath: imin_val
-      value: 70
+      value: 75
       objectReference: {fileID: 0}
     - target: {fileID: 2222995546400682197, guid: 111a7027f708d4e4492c3ac6f9f38269, type: 3}
       propertyPath: default_value
@@ -16323,7 +16398,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5076166319190762110, guid: 111a7027f708d4e4492c3ac6f9f38269, type: 3}
       propertyPath: imax_val
-      value: 100
+      value: 95
       objectReference: {fileID: 0}
     - target: {fileID: 5076166319190762110, guid: 111a7027f708d4e4492c3ac6f9f38269, type: 3}
       propertyPath: imin_val
@@ -17806,8 +17881,9 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1670177254}
+  - {fileID: 1373503757}
   - {fileID: 519420032}
+  - {fileID: 1670177254}
   - {fileID: 1023291915}
   - {fileID: 1486727593}
   - {fileID: 2003897260}

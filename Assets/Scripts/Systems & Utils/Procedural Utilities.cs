@@ -91,7 +91,7 @@ public static class PCGUtilities
         return threshold_levels;
     }
 
-    public static float[,] FeatherLevels(float[,] input_levels, Vector2Int start_point, Vector2Int end_point, int border_scale, bool vertical_feather, bool horizontal_feather, bool root_falloff)
+    public static float[,] FeatherLevels(float[,] input_levels, Vector2Int start_point, Vector2Int end_point, int border_scale, bool top_feather, bool right_feather, bool bottom_feather, bool left_feather, bool root_falloff)
     {
         float[,] new_levels = input_levels;
         // Set Levels Outside Bounds To 1
@@ -107,16 +107,10 @@ public static class PCGUtilities
             {
                 level_delta = 1;
                 // Calculate falloff based on distance from nearest bound
-                if (vertical_feather)
-                {
-                    if (y < border_scale) level_delta = (y - start_point.y) / (float)border_scale;
-                    else if (y >= end_point.y - border_scale) level_delta = (end_point.y - y - 1) / (float)border_scale;
-                }
-                if (horizontal_feather)
-                {
-                    if (x < border_scale) level_delta = (x - start_point.x) / (float)border_scale;
-                    else if (x >= end_point.x - border_scale) level_delta = (end_point.x - x - 1) / (float)border_scale;
-                }
+                if (y < border_scale && bottom_feather) level_delta = (y - start_point.y) / (float)border_scale;
+                if (y >= end_point.y - border_scale && top_feather) level_delta = (end_point.y - y - 1) / (float)border_scale;                
+                if (x < border_scale && left_feather) level_delta = (x - start_point.x) / (float)border_scale;
+                if (x >= end_point.x - border_scale && right_feather) level_delta = (end_point.x - x - 1) / (float)border_scale;                
 
                 // Alter level delta based on falloff type
                 if (root_falloff) level_delta = Mathf.Sqrt(level_delta);

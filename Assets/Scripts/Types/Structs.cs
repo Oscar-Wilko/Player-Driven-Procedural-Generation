@@ -134,4 +134,19 @@ public struct WaveVariables
     [Range(0.0f, 1.0f)]
     public float threshold;
 }
+
+[System.Serializable]
+public struct TunnelVariables
+{
+    [Range(100000, 10000000)] public int seed;
+    [Range(0, 25)] public int minTunnels;
+    [Range(0, 25)] public int maxTunnels;
+    [Range(1, 25)] public int minVertexCount;
+    [Range(1, 25)] public int maxVertexCount;
+    [Range(1, 100)] public float minVertexDist;
+    [Range(1, 100)] public float maxVertexDist;
+    [Range(0,1)] public float minRatio;
+    [Range(0,1)] public float maxRatio;
+    [Range(1, 8)] public int thickness;
+}
 #endregion

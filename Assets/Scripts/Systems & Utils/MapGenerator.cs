@@ -35,6 +35,11 @@ public class MapGenerator : MonoBehaviour
     public WaveVariables properties_dots;
     public float dots_threshold;
 
+    public TunnelVariables tunnelSurface;
+    public TunnelVariables tunnelVertical;
+    public TunnelVariables tunnelHorizontal;
+    public TunnelVariables tunnelFlat;
+
     [Header("Tracking Values")]
     [HideInInspector] public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
@@ -82,34 +87,42 @@ public class MapGenerator : MonoBehaviour
         tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
         tiles.width = b_map.GetLength(0);
         tiles.height = b_map.GetLength(1);
-        //ProceduralLayers layers = GenerateLayers(b_map.GetLength(0), b_map.GetLength(1));
 
         ProceduralLayers layers = new ProceduralLayers();
 
         Vector2Int size = new Vector2Int(b_map.GetLength(0), b_map.GetLength(1));
+
+        // Layer Generation
         layers.surface_height = Noise.Generate1DLevels(size.x, properties_surface);
         for (int i = 0; i < size.x; i++)
             layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size.y 
                 * layers.surface_height[i] + (min_perc_height * 0.01f) * size.y;
 
-        layers.layer_cave = PCGUtilities.ThresholdPass(
-            PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0, 0), 
-            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, true, true, true), cave_threshold);
+        float[,] caveWeight = Noise.Generate2DLevels(size, properties_cave);
+        caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)-16), 16, true, false, false, false, true);
+        caveWeight = TunnelPass(caveWeight, layers.surface_height);
+        caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, false, true, true, true, true);
+        layers.layer_cave = PCGUtilities.ThresholdPass(caveWeight, properties_cave.threshold);
 
         progress.SetProgressAmount(0.3f);
         yield return new WaitForEndOfFrame();
-        layers.layer_large_clump = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_l_clump), l_clump_threshold);
+
+        float[,] largeClumpWeight = Noise.Generate2DLevels(size, properties_l_clump);
+        layers.layer_large_clump = PCGUtilities.ThresholdPass(largeClumpWeight, properties_l_clump.threshold);
 
         progress.SetProgressAmount(0.4f);
         yield return new WaitForEndOfFrame();
-        layers.layer_small_clump = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_s_clump), s_clump_threshold);
+
+        float[,] smallClumpWeight = Noise.Generate2DLevels(size, properties_s_clump);
+        layers.layer_small_clump = PCGUtilities.ThresholdPass(smallClumpWeight, properties_s_clump.threshold);
 
         progress.SetProgressAmount(0.5f);
         yield return new WaitForEndOfFrame();
-        layers.layer_dots = PCGUtilities.ThresholdPass(
-            Noise.Generate2DLevels(size, properties_dots), dots_threshold);
+
+        float[,] dotsWeight = Noise.Generate2DLevels(size, properties_dots);
+        layers.layer_dots = PCGUtilities.ThresholdPass(dotsWeight, properties_dots.threshold);
 
         progress.SetProgressAmount(0.6f);
         yield return new WaitForEndOfFrame();
@@ -150,6 +163,86 @@ public class MapGenerator : MonoBehaviour
             generating = false;
         }
         yield break;
+    }
+
+    private float[,] TunnelPass(float[,] input, float[] surface)
+    {
+        float[,] map = input;
+        System.Random rng = new System.Random(tunnelSurface.seed);
+        // SURFACE TUNNELS
+        int tunnelCount = rng.Next(Mathf.Min(tunnelSurface.minTunnels, tunnelSurface.maxTunnels), 
+            Mathf.Max(tunnelSurface.minTunnels, tunnelSurface.maxTunnels));
+        for (int i = 0; i < tunnelCount; i++)
+        {
+            List<Vector2Int> tunnel = Tunnel.GenerateTunnel(tunnelSurface, Direction.Down);
+            int randX = rng.Next(Mathf.Min(16, input.GetLength(0)), Mathf.Max(0, input.GetLength(0)-16));
+            Vector2Int point = new Vector2Int(randX, (int)surface[randX]);
+            foreach(Vector2Int pos in tunnel)
+            {
+                Vector2Int target = pos + point;
+                if (target.x < 0 || target.x >= input.GetLength(0)) continue;
+                if (target.y < 0 || target.y >= input.GetLength(1)) continue;
+                input[target.x, target.y] *= 0.25f;
+            }
+            tunnelSurface.seed = Mathf.Abs((int)(tunnelSurface.seed * 5.213f) % 10000000);
+        }
+        // UNDERGROUND VERTICAL
+        tunnelCount = rng.Next(Mathf.Min(tunnelVertical.minTunnels, tunnelVertical.maxTunnels),
+            Mathf.Max(tunnelVertical.minTunnels, tunnelVertical.maxTunnels));
+        for (int i = 0; i < tunnelCount; i++)
+        {
+            List<Vector2Int> tunnel = Tunnel.GenerateTunnel(tunnelVertical, Direction.Down);
+            int randX = rng.Next(Mathf.Min(16, input.GetLength(0)), Mathf.Max(0, input.GetLength(0) - 16));
+            int randY = rng.Next(Mathf.Min(16, input.GetLength(1)), Mathf.Max(0, (int)surface[randX] - 16));
+            Vector2Int point = new Vector2Int(randX, randY);
+            foreach (Vector2Int pos in tunnel)
+            {
+                Vector2Int target = pos + point;
+                if (target.x < 0 || target.x >= input.GetLength(0)) continue;
+                if (target.y < 0 || target.y >= input.GetLength(1)) continue;
+                input[target.x, target.y] *= 0.25f;
+            }
+            tunnelVertical.seed = Mathf.Abs((int)(tunnelVertical.seed * 5.213f) % 10000000);
+        }
+
+        // UNDERGROUND HORIZONTAL
+        tunnelCount = rng.Next(Mathf.Min(tunnelHorizontal.minTunnels, tunnelHorizontal.maxTunnels),
+            Mathf.Max(tunnelHorizontal.minTunnels, tunnelHorizontal.maxTunnels));
+        for (int i = 0; i < tunnelCount; i++)
+        {
+            List<Vector2Int> tunnel = Tunnel.GenerateTunnel(tunnelHorizontal, rng.Next(0,2) == 1 ? Direction.Right : Direction.Left);
+            int randX = rng.Next(Mathf.Min(16, input.GetLength(0)), Mathf.Max(0, input.GetLength(0) - 16));
+            int randY = rng.Next(Mathf.Min(16, input.GetLength(1)), Mathf.Max(0, (int)surface[randX] - 16));
+            Vector2Int point = new Vector2Int(randX, randY);
+            foreach (Vector2Int pos in tunnel)
+            {
+                Vector2Int target = pos + point;
+                if (target.x < 0 || target.x >= input.GetLength(0)) continue;
+                if (target.y < 0 || target.y >= input.GetLength(1)) continue;
+                input[target.x, target.y] *= 0.25f;
+            }
+            tunnelHorizontal.seed = Mathf.Abs((int)(tunnelHorizontal.seed * 5.213f) % 10000000);
+        }
+
+        // UNDERGROUND FLAT
+        tunnelCount = rng.Next(Mathf.Min(tunnelFlat.minTunnels, tunnelFlat.maxTunnels),
+            Mathf.Max(tunnelFlat.minTunnels, tunnelFlat.maxTunnels));
+        for (int i = 0; i < tunnelCount; i++)
+        {
+            List<Vector2Int> tunnel = Tunnel.GenerateTunnel(tunnelFlat, rng.Next(0, 2) == 1 ? Direction.Right : Direction.Left);
+            int randX = rng.Next(Mathf.Min(16, input.GetLength(0)), Mathf.Max(0, input.GetLength(0) - 16));
+            int randY = rng.Next(Mathf.Min(16, input.GetLength(1)), Mathf.Max(0, (int)surface[randX] - 16));
+            Vector2Int point = new Vector2Int(randX, randY);
+            foreach (Vector2Int pos in tunnel)
+            {
+                Vector2Int target = pos + point;
+                if (target.x < 0 || target.x >= input.GetLength(0)) continue;
+                if (target.y < 0 || target.y >= input.GetLength(1)) continue;
+                input[target.x, target.y] *= 0.25f;
+            }
+            tunnelFlat.seed = Mathf.Abs((int)(tunnelFlat.seed * 5.213f) % 10000000);
+        }
+        return map;
     }
 
     private void ScrambleSeeds()
@@ -580,27 +673,6 @@ public class MapGenerator : MonoBehaviour
     }
     #endregion
 
-    private ProceduralLayers GenerateLayers(int size_x, int size_y)
-    {
-        ProceduralLayers layers = new ProceduralLayers();
-
-        Vector2Int size = new Vector2Int(size_x,size_y);
-        layers.surface_height       = Noise.Generate1DLevels(size_x, properties_surface);
-        for (int i = 0; i < size_x; i++)
-        {
-            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size_y * 
-                layers.surface_height[i] + (min_perc_height * 0.01f) * size_y;
-        }
-
-        layers.layer_cave = PCGUtilities.ThresholdPass(PCGUtilities.FeatherLevels(Noise.Generate2DLevels(size, properties_cave), new Vector2Int(0,0), 
-            new Vector2Int(size_x,(int)(max_perc_height*0.01f*size.y)), 16, true, true, true), properties_cave.threshold);
-        layers.layer_large_clump = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_l_clump), properties_l_clump.threshold);
-        layers.layer_small_clump = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_s_clump), properties_s_clump.threshold);
-        layers.layer_dots = PCGUtilities.ThresholdPass(Noise.Generate2DLevels(size, properties_dots), properties_dots.threshold);
-
-        return layers;
-    }
-
     public bool Looping()
     {
         return generating && (frame_by_frame || loop_generating);
@@ -629,8 +701,7 @@ public class MapGenerator : MonoBehaviour
             case NoiseVariable.Octaves: wave.octaves = (int)value; break;
             case NoiseVariable.Persistance: wave.persistance = (float)value; break;
             case NoiseVariable.Lacunarity: wave.lacunarity = (float)value; break;
-            case NoiseVariable.Threshold: wave.threshold = (float)value;
-                Debug.Log("Threshold changed"); break;
+            case NoiseVariable.Threshold: wave.threshold = (float)value; break;
             default: return;
         }
         switch (type)

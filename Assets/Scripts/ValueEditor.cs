@@ -24,6 +24,7 @@ public class ValueEditor : MonoBehaviour
     [Space]
     public UnityEvent<int> IntValueChanged;
     public UnityEvent<float> FloatValueChanged;
+    private bool initCheck = false;
 
     private void Start()
     {
@@ -36,10 +37,12 @@ public class ValueEditor : MonoBehaviour
             UpdateFloatValue(fdefault_value);
         else
             UpdateIntValue(idefault_value);
+        initCheck = true;
     }
 
     public void RefreshValue()
     {
+        if (!initCheck) return;
         if (is_float)
         {
             float prev_val = fvalue;
@@ -58,7 +61,9 @@ public class ValueEditor : MonoBehaviour
             else if (int.Parse(val_input.text) != ivalue)
                 UpdateIntValue(int.Parse(val_input.text));
             if (prev_val != ivalue && prev_val >= 0)
+            {
                 IntValueChanged.Invoke(ivalue);
+            }
         }
     }
 
