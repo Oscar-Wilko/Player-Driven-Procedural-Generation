@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: high_ore
   m_EditorClassIdentifier: 
   m_Sprite: {fileID: 21300000, guid: 40dc2ef9ef40df145900f6ccb7f79d08, type: 3}
-  m_Color: {r: 0.33578205, g: 0, b: 1, a: 1}
+  m_Color: {r: 0.52965415, g: 0.40503737, b: 0.7735849, a: 1}
   m_Transform:
     e00: 1
     e01: 0

@@ -49,7 +49,10 @@ public enum TileID
     Icicles = 26,
     Snow = 27,
     Water = 28,
-    Wall = 29
+    Wall = 29,
+    Stalagtite = 30,
+    Stalagmite = 31,
+    Lava = 32
 }
 
 public enum Direction
@@ -62,11 +65,12 @@ public enum Direction
 
 public enum NoiseType
 {
-    Cave01,
-    Surface01,
-    SmallClump01,
-    LargeClump01,
-    Dots01
+    Cave01 = 0,
+    Surface01 = 1,
+    SmallClump01 = 2,
+    LargeClump01 = 3,
+    Dots01 = 4,
+    Water01 = 5
 }
 
 public enum NoiseVariable

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: obsidian
   m_EditorClassIdentifier: 
   m_Sprite: {fileID: 21300000, guid: 40dc2ef9ef40df145900f6ccb7f79d08, type: 3}
-  m_Color: {r: 0.1913853, g: 0.06421325, b: 0.3490566, a: 1}
+  m_Color: {r: 0.17109881, g: 0.07876469, b: 0.2830189, a: 1}
   m_Transform:
     e00: 1
     e01: 0

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: flowers
   m_EditorClassIdentifier: 
   m_Sprite: {fileID: 21300000, guid: 40dc2ef9ef40df145900f6ccb7f79d08, type: 3}
-  m_Color: {r: 0.8345675, g: 0.8867924, b: 0.037646834, a: 1}
+  m_Color: {r: 0.6281982, g: 0.8862745, b: 0.039215703, a: 1}
   m_Transform:
     e00: 1
     e01: 0

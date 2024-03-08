@@ -12,8 +12,10 @@ public class MapGenerator : MonoBehaviour
     public NoiseField large_clump_field;
     public NoiseField small_clump_field;
     public NoiseField dots_field;
+    public NoiseField water_field;
     public ValueEditor min_height_editor;
     public ValueEditor max_height_editor;
+    private ProgressBar progress;
 
     [Header("Tweaking Values")]
     public int biome_size;
@@ -27,14 +29,12 @@ public class MapGenerator : MonoBehaviour
     public int max_perc_height;
     public int min_perc_height;
     public WaveVariables properties_cave;
-    public float cave_threshold;
     public WaveVariables properties_l_clump;
-    public float l_clump_threshold;
     public WaveVariables properties_s_clump;
-    public float s_clump_threshold;
     public WaveVariables properties_dots;
-    public float dots_threshold;
+    public WaveVariables properties_water;
 
+    [Header("Tunnels")]
     public TunnelVariables tunnelSurface;
     public TunnelVariables tunnelVertical;
     public TunnelVariables tunnelHorizontal;
@@ -43,8 +43,6 @@ public class MapGenerator : MonoBehaviour
     [Header("Tracking Values")]
     [HideInInspector] public TileInfo cur_output = new TileInfo(0,0);
     private bool generating = false;
-
-    private ProgressBar progress;
 
     private void Awake()
     {
@@ -127,13 +125,20 @@ public class MapGenerator : MonoBehaviour
         progress.SetProgressAmount(0.6f);
         yield return new WaitForEndOfFrame();
 
+        float[,] waterWeight = Noise.Generate2DLevels(size, properties_water);
+        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold), 
+            layers.layer_cave, layers.surface_height);
+
+        progress.SetProgressAmount(0.7f);
+        yield return new WaitForEndOfFrame();
+
         t_lay = Time.realtimeSinceStartup - t_lay;
         t_pre = Time.realtimeSinceStartup;
         for (int x = 0; x < b_map.GetLength(0); x++)
         {
             if (x % 64 == 0)
             {
-                progress.SetProgressAmount(0.6f + (float)x / b_map.GetLength(0) * 0.4f);
+                progress.SetProgressAmount(0.7f + (float)x / b_map.GetLength(0) * 0.3f);
                 if (frame_by_frame)
                     cur_output = tiles;
                 yield return new WaitForEndOfFrame();
@@ -245,6 +250,24 @@ public class MapGenerator : MonoBehaviour
         return map;
     }
 
+    private bool[,] SettleWater(bool[,] water_map, bool[,] cave_layer, float[] surface_layer)
+    {
+        bool[,] w_map = new bool[water_map.GetLength(0),water_map.GetLength(1)];
+        Vector2Int size = new Vector2Int(water_map.GetLength(0), water_map.GetLength(1));
+        for(int x = 0; x < size.x; x ++)
+        {
+            for(int y = 0; y < size.y; y ++)
+            {
+                if (y > (int)surface_layer[x])
+                    continue;
+                w_map[x, y] = water_map[x, y] && cave_layer[x, y];
+            }
+        }
+        // Settle water by gravity
+
+        return w_map;
+    }
+
     private void ScrambleSeeds()
     {
         properties_surface.seed = Mathf.Abs((int)(properties_surface.seed * 4.51f) % 10000000);
@@ -252,11 +275,13 @@ public class MapGenerator : MonoBehaviour
         properties_l_clump.seed = Mathf.Abs((int)(properties_l_clump.seed * 6.84f) % 10000000);
         properties_s_clump.seed = Mathf.Abs((int)(properties_s_clump.seed * 8.67f) % 10000000);
         properties_dots.seed = Mathf.Abs((int)(properties_dots.seed * 6.56f) % 10000000);
+        properties_water.seed = Mathf.Abs((int)(properties_dots.seed * 6.56f) % 10000000);
         surface_field.SetNewSeed(properties_surface.seed);
         cave_field.SetNewSeed(properties_cave.seed);
         large_clump_field.SetNewSeed(properties_l_clump.seed);
         small_clump_field.SetNewSeed(properties_s_clump.seed);
         dots_field.SetNewSeed(properties_dots.seed);
+        water_field.SetNewSeed(properties_water.seed);
     }
 
     private Biome[,] ExpandMap(MapInfo inp_map)
@@ -425,27 +450,31 @@ public class MapGenerator : MonoBehaviour
     }
 
     #region Biome Generation
+
     private TileID StandardGeneration(Vector2Int pos, ProceduralLayers layers)
     {
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Gravel;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.LowValOre;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Gravel;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.LowValOre;
-            else
-                return Random.Range(0, 100) > 80 ? TileID.Stone : TileID.Dirt;
-        }
+            return TileID.Stone;        
     }
 
     private TileID FrozenGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -453,27 +482,29 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            if (pos.y + 1 >= (int)layers.layer_cave.GetLength(1))
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.ColdWater;
+            else if (pos.y + 1 >= layers.layer_cave.GetLength(1))
                 return TileID.Wall;
             else if (!layers.layer_cave[pos.x, pos.y + 1] && Random.Range(0,100) > 70)
                 return TileID.Icicles;
             else
                 return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Snow;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.HardIce;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.ColdWater;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.HardIce;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.ColdWater;
-            else
-                return TileID.Ice;
-        }
+            return TileID.Ice;
     }
 
     private TileID DesertGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -481,22 +512,22 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x,pos.y])
             return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Sand;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.HardSand;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.BurriedItem;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.HardSand;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.BurriedItem;
-            else
-                return TileID.Sand;
-        }
+            return TileID.Sand;
     }
 
     private TileID SwampGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -504,22 +535,25 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Mud;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Gravel;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.Mud;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Gravel;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.Water;
-            else
-                return TileID.Dirt;
-        }
+            return TileID.Dirt;
     }
 
     private TileID RockyGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -527,22 +561,25 @@ public class MapGenerator : MonoBehaviour
         // Above Surface or in cave
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Gravel;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.LowValOre;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Gravel;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.LowValOre;
-            else
-                return TileID.Stone;
-        }
+            return TileID.Stone;
     }
 
     private TileID SharpRockyGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -550,22 +587,33 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else if (pos.y + 1 >= layers.layer_cave.GetLength(1))
+                return TileID.Wall;
+            else if (!layers.layer_cave[pos.x, pos.y + 1] && Random.Range(0, 100) > 70)
+                return TileID.Stalagtite;
+            else if (pos.y - 1 >= layers.layer_cave.GetLength(1))
+                return TileID.Wall;
+            else if (!layers.layer_cave[pos.x, pos.y - 1] && Random.Range(0, 100) > 70)
+                return TileID.Stalagmite;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Gravel;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.LowValOre;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Gravel;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.LowValOre;
-            else
-                return TileID.Stone;
-        }
+            return TileID.Stone;
     }
 
     private TileID LavaGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -573,22 +621,25 @@ public class MapGenerator : MonoBehaviour
         // Above Surface or in cave
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Lava;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Magma;
+
         // Below Surface and out cave
+        else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Magma;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.Obsidian;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Magma;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.Obsidian;
-            else
-                return TileID.Molten;
-        }
+            return TileID.Molten;
     }
 
     private TileID WaterGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -606,24 +657,35 @@ public class MapGenerator : MonoBehaviour
         // Above Surface or in cave
         if (pos.y > (int)layers.surface_height[pos.x] + 1)
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else if (pos.y + 1 >= layers.layer_cave.GetLength(1))
+                return TileID.Wall;
+            else if (!layers.layer_cave[pos.x, pos.y + 1] && Random.Range(0, 100) > 70)
+                return TileID.Vines;
+            else if (pos.y - 1 >= layers.layer_cave.GetLength(1))
+                return TileID.Wall;
+            else if (!layers.layer_cave[pos.x, pos.y - 1] && Random.Range(0, 100) > 70)
+                return TileID.Flowers;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x] + 1)
             return Random.Range(0,100) > 80 ? TileID.Bushes : TileID.None;
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
+
         // Below Surface and out cave
+        if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Gravel;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.Mud;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Gravel;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.Water;
-            else
-                return TileID.Stone;
-        }
+            return TileID.Stone;
     }
 
     private TileID RadioactiveGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -631,22 +693,25 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Cobblestone;
+
         // Below Surface and out cave
+        if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.RadioactiveBlock;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.HighValOre;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.RadioactiveBlock;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.HighValOre;
-            else
-                return TileID.Stone;
-        }
+            return TileID.Stone;
     }
 
     private TileID LushiousGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -654,32 +719,32 @@ public class MapGenerator : MonoBehaviour
         // Above Surface
         if (pos.y > (int)layers.surface_height[pos.x])
             return TileID.None;
+
         // Cave
         else if (layers.layer_cave[pos.x, pos.y])
-            return TileID.Wall;
+            if (layers.layer_water[pos.x, pos.y])
+                return TileID.Water;
+            else
+                return TileID.Wall;
+
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
+
         // Below Surface and out cave
+        if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.Dirt;
+        else if (layers.layer_small_clump[pos.x, pos.y])
+            return TileID.Water;
         else
-        {
-            if (layers.layer_large_clump[pos.x, pos.y])
-                return TileID.Dirt;
-            else if (layers.layer_small_clump[pos.x, pos.y])
-                return TileID.Water;
-            else
-                return TileID.Stone;
-        }
+            return TileID.Stone;
     }
     #endregion
-
-    public bool Looping()
-    {
-        return generating && (frame_by_frame || loop_generating);
-    }
-
+    #region Quick Functions
+    public bool Looping() => generating && (frame_by_frame || loop_generating);
     public bool ShowVisual() => !generating || frame_by_frame;
-
+    #endregion
+    #region UI
     public void UpdateBiomeSize(int new_size) => biome_size = new_size;
     public void UpdateNoiseValue(NoiseType type, NoiseVariable var, object value)
     {
@@ -691,6 +756,7 @@ public class MapGenerator : MonoBehaviour
             case NoiseType.SmallClump01: wave = properties_s_clump; break;
             case NoiseType.LargeClump01: wave = properties_l_clump; break;
             case NoiseType.Dots01: wave = properties_dots; break;
+            case NoiseType.Water01: wave = properties_water; break;
             default: return;
         }
         switch (var)
@@ -711,6 +777,7 @@ public class MapGenerator : MonoBehaviour
             case NoiseType.SmallClump01: properties_s_clump = wave; break;
             case NoiseType.LargeClump01: properties_l_clump = wave; break;
             case NoiseType.Dots01: properties_dots = wave; break;
+            case NoiseType.Water01: properties_water = wave; break;
             default: return;
         }
     }
@@ -725,8 +792,10 @@ public class MapGenerator : MonoBehaviour
         large_clump_field.Initialize(properties_l_clump);
         small_clump_field.Initialize(properties_s_clump);
         dots_field.Initialize(properties_dots);
+        water_field.Initialize(properties_water);
 
         min_height_editor.UpdateIntValue(min_perc_height);
         max_height_editor.UpdateIntValue(max_perc_height);
     }
+    #endregion
 }

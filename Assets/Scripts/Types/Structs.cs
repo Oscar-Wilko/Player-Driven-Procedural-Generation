@@ -116,6 +116,7 @@ public struct ProceduralLayers
     public bool[,] layer_large_clump;
     public bool[,] layer_small_clump;
     public bool[,] layer_dots;
+    public bool[,] layer_water;
 }
 
 [System.Serializable]
