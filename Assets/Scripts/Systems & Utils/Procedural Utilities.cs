@@ -107,10 +107,10 @@ public static class PCGUtilities
             {
                 level_delta = 1;
                 // Calculate falloff based on distance from nearest bound
-                if (y < border_scale && bottom_feather) level_delta = (y - start_point.y) / (float)border_scale;
-                if (y >= end_point.y - border_scale && top_feather) level_delta = (end_point.y - y - 1) / (float)border_scale;                
-                if (x < border_scale && left_feather) level_delta = (x - start_point.x) / (float)border_scale;
-                if (x >= end_point.x - border_scale && right_feather) level_delta = (end_point.x - x - 1) / (float)border_scale;                
+                if (y < border_scale && bottom_feather) level_delta *= (y - start_point.y) / (float)border_scale;
+                if (y >= end_point.y - border_scale && top_feather) level_delta *= (end_point.y - y - 1) / (float)border_scale;                
+                if (x < border_scale && left_feather) level_delta *= (x - start_point.x) / (float)border_scale;
+                if (x >= end_point.x - border_scale && right_feather) level_delta *= (end_point.x - x - 1) / (float)border_scale;                
 
                 // Alter level delta based on falloff type
                 if (root_falloff) level_delta = Mathf.Sqrt(level_delta);

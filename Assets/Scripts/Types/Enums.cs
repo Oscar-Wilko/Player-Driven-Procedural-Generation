@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public enum Biome
 {
     None = 0,
@@ -73,6 +75,14 @@ public enum NoiseType
     Water01 = 5
 }
 
+public enum TunnelType
+{
+    Surface01 = 0,
+    Vertical01 = 1,
+    Horizontal01 = 2,
+    Flat01 = 3
+}
+
 public enum NoiseVariable
 {
     Seed,
@@ -82,4 +92,18 @@ public enum NoiseVariable
     Persistance,
     Lacunarity,
     Threshold
+}
+
+public enum TunnelVariable
+{
+    Seed,
+    MinTunnels,
+    MaxTunnels,
+    MinVertexCount,
+    MaxVertexCount,
+    MinVertexDist,
+    MaxVertexDist,
+    MinRatio,
+    MaxRatio,
+    Thickness
 }

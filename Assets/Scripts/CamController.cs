@@ -67,7 +67,7 @@ public class CamController : MonoBehaviour
 
     private void CheckZoom()
     {
-        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize - Input.mouseScrollDelta.y * scroll_factor, 1, 30);
+        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize - Input.mouseScrollDelta.y * scroll_factor, 0.5f, 20);
     }
 
     public void SetCamState(int state)

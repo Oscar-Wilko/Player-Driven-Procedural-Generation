@@ -13,6 +13,10 @@ public class MapGenerator : MonoBehaviour
     public NoiseField small_clump_field;
     public NoiseField dots_field;
     public NoiseField water_field;
+    public TunnelField s_tunnel_field;
+    public TunnelField v_tunnel_field;
+    public TunnelField h_tunnel_field;
+    public TunnelField f_tunnel_field;
     public ValueEditor min_height_editor;
     public ValueEditor max_height_editor;
     private ProgressBar progress;
@@ -63,16 +67,16 @@ public class MapGenerator : MonoBehaviour
 
         // Declare Variables
         float t = Time.realtimeSinceStartup;
-        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0;
+        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0; float t_wat = 0;
         generating = true;
-        TileInfo tiles = new TileInfo(0,0);
+        TileInfo tiles = new TileInfo(0, 0);
 
         // Expand biome array with transitions
         t_pre = Time.realtimeSinceStartup;
         Biome[,] b_map = ExpandMap(info);
         Biome[] biome_map_array = new Biome[b_map.GetLength(0) * b_map.GetLength(1)];
-        for (int x = 0; x < b_map.GetLength(0); x ++)
-            for (int y = 0; y < b_map.GetLength(1); y ++)
+        for (int x = 0; x < b_map.GetLength(0); x++)
+            for (int y = 0; y < b_map.GetLength(1); y++)
                 biome_map_array[x + y * b_map.GetLength(0)] = b_map[x, y];
         tiles.biome_map = biome_map_array;
         t_exp = Time.realtimeSinceStartup - t_pre;
@@ -81,7 +85,7 @@ public class MapGenerator : MonoBehaviour
         yield return new WaitForEndOfFrame();
 
         // Convert biome array to map
-        t_lay = Time.realtimeSinceStartup;
+        t_pre = Time.realtimeSinceStartup;
         tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
         tiles.width = b_map.GetLength(0);
         tiles.height = b_map.GetLength(1);
@@ -93,12 +97,12 @@ public class MapGenerator : MonoBehaviour
         // Layer Generation
         layers.surface_height = Noise.Generate1DLevels(size.x, properties_surface);
         for (int i = 0; i < size.x; i++)
-            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size.y 
+            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size.y
                 * layers.surface_height[i] + (min_perc_height * 0.01f) * size.y;
 
         float[,] caveWeight = Noise.Generate2DLevels(size, properties_cave);
         caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
-            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)-16), 16, true, false, false, false, true);
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y) - 16), 16, true, false, false, false, true);
         caveWeight = TunnelPass(caveWeight, layers.surface_height);
         caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
             new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, false, true, true, true, true);
@@ -125,14 +129,17 @@ public class MapGenerator : MonoBehaviour
         progress.SetProgressAmount(0.6f);
         yield return new WaitForEndOfFrame();
 
+        t_lay += Time.realtimeSinceStartup - t_pre;
+        t_pre = Time.realtimeSinceStartup;
         float[,] waterWeight = Noise.Generate2DLevels(size, properties_water);
-        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold), 
+        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold),
             layers.layer_cave, layers.surface_height);
+        t_wat += Time.realtimeSinceStartup - t_pre;
 
         progress.SetProgressAmount(0.7f);
         yield return new WaitForEndOfFrame();
 
-        t_lay = Time.realtimeSinceStartup - t_lay;
+        t_lay += Time.realtimeSinceStartup - t_pre;
         t_pre = Time.realtimeSinceStartup;
         for (int x = 0; x < b_map.GetLength(0); x++)
         {
@@ -154,8 +161,8 @@ public class MapGenerator : MonoBehaviour
         ScrambleSeeds();
         // Repeat if looping enabled
         if (!frame_by_frame && output_stats)
-            Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to generate map from biome map.\n" +
-            "Expanding map took " + t_exp + " seconds. Making layers took " + t_lay + " seconds. Converting map took " + t_con + " seconds.");
+            Debug.Log($"It took {Time.realtimeSinceStartup - t} seconds to generate map from biome map.\n" +
+                $"Expanding map took {t_exp} seconds. Making layers took {t_lay} seconds (Of which water was {t_wat} seconds). Converting map took {t_con} seconds.");
 
         if (loop_generating)
         {
@@ -252,24 +259,57 @@ public class MapGenerator : MonoBehaviour
 
     private bool[,] SettleWater(bool[,] water_map, bool[,] cave_layer, float[] surface_layer)
     {
-        bool[,] w_map = new bool[water_map.GetLength(0),water_map.GetLength(1)];
         Vector2Int size = new Vector2Int(water_map.GetLength(0), water_map.GetLength(1));
-        for(int x = 0; x < size.x; x ++)
+        bool[,] w_map = new bool[size.x, size.y];
+        // Settle water by gravity
+        for (int x = 0; x < size.x; x++)
         {
-            for(int y = 0; y < size.y; y ++)
+            for (int y = 0; y < size.y; y++)
             {
-                if (y > (int)surface_layer[x])
+                if (!water_map[x, y] || !cave_layer[x, y] || y > (int)surface_layer[x])
                     continue;
-                w_map[x, y] = water_map[x, y] && cave_layer[x, y];
+                bool moving = true;
+                bool hitLeft = false;
+                Vector2Int curShift = Vector2Int.zero;
+                while (moving)
+                {
+                    moving = false;
+                    if (y + curShift.y - 1 <= 0)
+                        continue;
+                    if (!w_map[x + curShift.x, y + curShift.y - 1] && cave_layer[x + curShift.x, y + curShift.y - 1])
+                    {
+                        curShift.y -= 1;
+                        hitLeft = false;
+                        moving = true; continue;
+                    }
+                    else if (!hitLeft)
+                    {
+                        if (w_map[x + curShift.x - 1, y + curShift.y] || !cave_layer[x + curShift.x - 1, y + curShift.y])
+                        {
+                            hitLeft = true;
+                            moving = true; continue;
+                        }
+                        else
+                        {
+                            curShift.x -= 1;
+                            moving = true; continue;
+                        }
+                    }
+                    else if (!w_map[x + curShift.x + 1, y + curShift.y] && cave_layer[x + curShift.x + 1, y + curShift.y])
+                    {
+                        curShift.x += 1;
+                        moving = true; continue;
+                    }
+                }
+                w_map[x + curShift.x, y + curShift.y] = true;
             }
         }
-        // Settle water by gravity
-
         return w_map;
     }
 
     private void ScrambleSeeds()
     {
+        // Noise Fields
         properties_surface.seed = Mathf.Abs((int)(properties_surface.seed * 4.51f) % 10000000);
         properties_cave.seed = Mathf.Abs((int)(properties_cave.seed * 5.16f) % 10000000);
         properties_l_clump.seed = Mathf.Abs((int)(properties_l_clump.seed * 6.84f) % 10000000);
@@ -282,6 +322,16 @@ public class MapGenerator : MonoBehaviour
         small_clump_field.SetNewSeed(properties_s_clump.seed);
         dots_field.SetNewSeed(properties_dots.seed);
         water_field.SetNewSeed(properties_water.seed);
+
+        // Tunnel Fields
+        tunnelSurface.seed = Mathf.Abs((int)(tunnelSurface.seed * 5.213f) % 10000000);
+        tunnelVertical.seed = Mathf.Abs((int)(tunnelVertical.seed * 5.213f) % 10000000);
+        tunnelHorizontal.seed = Mathf.Abs((int)(tunnelHorizontal.seed * 5.213f) % 10000000);
+        tunnelFlat.seed = Mathf.Abs((int)(tunnelFlat.seed * 5.213f) % 10000000);
+        s_tunnel_field.SetNewSeed(tunnelSurface.seed);
+        v_tunnel_field.SetNewSeed(tunnelVertical.seed);
+        h_tunnel_field.SetNewSeed(tunnelHorizontal.seed);
+        f_tunnel_field.SetNewSeed(tunnelFlat.seed);
     }
 
     private Biome[,] ExpandMap(MapInfo inp_map)
@@ -782,6 +832,41 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
+    public void UpdateTunnelValue(TunnelType type, TunnelVariable var, object value)
+    {
+        TunnelVariables wave;
+        switch (type)
+        {
+            case TunnelType.Surface01: wave = tunnelSurface; break;
+            case TunnelType.Vertical01: wave = tunnelVertical; break;
+            case TunnelType.Horizontal01: wave = tunnelHorizontal; break;
+            case TunnelType.Flat01: wave = tunnelFlat; break;
+            default: return;
+        }
+        switch (var)
+        {
+            case TunnelVariable.Seed: wave.seed = (int)value; break;
+            case TunnelVariable.MinTunnels: wave.minTunnels = (int)value; break;
+            case TunnelVariable.MaxTunnels: wave.maxTunnels = (int)value; break;
+            case TunnelVariable.MinVertexCount: wave.minVertexCount = (int)value; break;
+            case TunnelVariable.MaxVertexCount: wave.maxVertexCount = (int)value; break;
+            case TunnelVariable.MinVertexDist: wave.minVertexDist = (float)value; break;
+            case TunnelVariable.MaxVertexDist: wave.maxVertexDist = (float)value; break;
+            case TunnelVariable.MinRatio: wave.minRatio = (float)value; break;
+            case TunnelVariable.MaxRatio: wave.maxRatio = (float)value; break;
+            case TunnelVariable.Thickness: wave.thickness = (int)value; break;
+            default: return;
+        }
+        switch (type)
+        {
+            case TunnelType.Surface01: tunnelSurface = wave; break;
+            case TunnelType.Vertical01: tunnelVertical = wave; break;
+            case TunnelType.Horizontal01: tunnelHorizontal = wave; break;
+            case TunnelType.Flat01: tunnelFlat = wave; break;
+            default: return;
+        }
+    }
+
     public void UpdateSurfaceMinHeight(int perc) => min_perc_height = perc;
     public void UpdateSurfaceMaxHeight(int perc) => max_perc_height = perc;
 
@@ -793,6 +878,11 @@ public class MapGenerator : MonoBehaviour
         small_clump_field.Initialize(properties_s_clump);
         dots_field.Initialize(properties_dots);
         water_field.Initialize(properties_water);
+
+        s_tunnel_field.Initialize(tunnelSurface);
+        v_tunnel_field.Initialize(tunnelVertical);
+        h_tunnel_field.Initialize(tunnelHorizontal);
+        f_tunnel_field.Initialize(tunnelFlat);
 
         min_height_editor.UpdateIntValue(min_perc_height);
         max_height_editor.UpdateIntValue(max_perc_height);

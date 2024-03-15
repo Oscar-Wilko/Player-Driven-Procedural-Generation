@@ -13,11 +13,22 @@ public class NoiseField : MonoBehaviour
     public UnityEvent<float> SetPersistance;
     public UnityEvent<float> SetLacunarity;
     public UnityEvent<float> SetThreshold;
+    [SerializeField] private GameObject fullSegment;
+    [SerializeField] private GameObject viewToggleLeft;
+    [SerializeField] private GameObject viewToggleRight;
     private MapGenerator generator;
+    private bool viewState;
+    private float initHeight;
 
     private void Awake()
     {
         generator = FindObjectOfType<MapGenerator>();
+        initHeight = GetComponent<RectTransform>().sizeDelta.y;
+    }
+
+    private void Start()
+    {
+        ToggleView(false);
     }
 
     public void RefreshSeed(int val) => generator.UpdateNoiseValue(type, NoiseVariable.Seed, val);
@@ -38,4 +49,15 @@ public class NoiseField : MonoBehaviour
         SetLacunarity.Invoke(wave_vars.lacunarity);
         SetThreshold.Invoke(wave_vars.threshold);
     }
+
+    public void ToggleView(bool newState)
+    {
+        viewState = newState;
+        viewToggleLeft.SetActive(newState);
+        viewToggleRight.SetActive(!newState);
+        fullSegment.SetActive(newState);
+        GetComponent<RectTransform>().sizeDelta = new Vector2(0, newState ? initHeight : 50);
+    }
+
+    public void ToggleView() => ToggleView(!viewState);
 }
