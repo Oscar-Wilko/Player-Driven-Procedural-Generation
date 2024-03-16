@@ -16,7 +16,6 @@ public enum Biome
     Radioactive = 11,
     Luscious = 12
 }
-
 /// <summary>
 /// TileID enum, numbered if IDs get removed
 /// </summary>
@@ -56,7 +55,6 @@ public enum TileID
     Stalagmite = 31,
     Lava = 32
 }
-
 public enum Direction
 {
     Up,
@@ -64,7 +62,6 @@ public enum Direction
     Left,
     Right
 }
-
 public enum NoiseType
 {
     Cave01 = 0,
@@ -74,7 +71,6 @@ public enum NoiseType
     Dots01 = 4,
     Water01 = 5
 }
-
 public enum TunnelType
 {
     Surface01 = 0,
@@ -82,7 +78,6 @@ public enum TunnelType
     Horizontal01 = 2,
     Flat01 = 3
 }
-
 public enum NoiseVariable
 {
     Seed,
@@ -93,7 +88,6 @@ public enum NoiseVariable
     Lacunarity,
     Threshold
 }
-
 public enum TunnelVariable
 {
     Seed,

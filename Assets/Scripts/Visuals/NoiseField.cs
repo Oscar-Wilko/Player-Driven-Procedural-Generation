@@ -6,6 +6,8 @@ using UnityEngine.Events;
 public class NoiseField : MonoBehaviour
 {
     [SerializeField] private NoiseType type;
+
+    [Header("Events")]
     public UnityEvent<int> SetSeed;
     public UnityEvent<int> SetOctaves;
     public UnityEvent<float> SetScaleX;
@@ -13,9 +15,12 @@ public class NoiseField : MonoBehaviour
     public UnityEvent<float> SetPersistance;
     public UnityEvent<float> SetLacunarity;
     public UnityEvent<float> SetThreshold;
+
+    [Header("References")]
     [SerializeField] private GameObject fullSegment;
     [SerializeField] private GameObject viewToggleLeft;
     [SerializeField] private GameObject viewToggleRight;
+
     private MapGenerator generator;
     private bool viewState;
     private float initHeight;

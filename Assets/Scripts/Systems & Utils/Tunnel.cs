@@ -6,6 +6,12 @@ public class Tunnel
 {
     private static readonly List<Vector2Int> directions = new List<Vector2Int>() { new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(-1,0), new Vector2Int(0,-1) };
 
+    /// <summary>
+    /// Generate a tunnel with inputted tunnel variables and direction
+    /// </summary>
+    /// <param name="vars">TunnelVariables that dictate generation of tunnel</param>
+    /// <param name="dir">Direction of tunnel</param>
+    /// <returns>List of Vector2Ints of tunnel tile positions</returns>
     public static List<Vector2Int> GenerateTunnel(TunnelVariables vars, Direction dir)
     {
         List<Vector2Int> tunnelTiles = new List<Vector2Int>() { Vector2Int.zero };
@@ -54,6 +60,11 @@ public class Tunnel
         return tunnelTiles;
     }
 
+    /// <summary>
+    /// Flip positions across X axis
+    /// </summary>
+    /// <param name="list">List of Vector2Int positions</param>
+    /// <returns>List of Vector2Int flipped positions</returns>
     public static List<Vector2Int> FlipX(List<Vector2Int> list)
     {
         List<Vector2Int> alteredList = new List<Vector2Int>(list);
@@ -61,7 +72,12 @@ public class Tunnel
             alteredList[i] = new Vector2Int(alteredList[i].x * -1, alteredList[i].y);
         return alteredList;
     }
-    
+
+    /// <summary>
+    /// Flip positions across y axis
+    /// </summary>
+    /// <param name="list">List of Vector2Int positions</param>
+    /// <returns>List of Vector2Int flipped positions</returns>
     public static List<Vector2Int> FlipY(List<Vector2Int> list)
     {
         List<Vector2Int> alteredList = new List<Vector2Int>(list);
@@ -70,6 +86,11 @@ public class Tunnel
         return alteredList;
     }
 
+    /// <summary>
+    /// Mirror positions across y=x line
+    /// </summary>
+    /// <param name="list">List of Vector2Int positions</param>
+    /// <returns>List of Vector2Int mirrored positions</returns>
     public static List<Vector2Int> Mirror(List<Vector2Int> list)
     {
         List<Vector2Int> alteredList = new List<Vector2Int>(list);
@@ -78,6 +99,12 @@ public class Tunnel
         return alteredList;
     }
 
+    /// <summary>
+    /// Expand List of positions out by a set amount of tiles
+    /// </summary>
+    /// <param name="tiles">List of Vector2Ints of inputted tiles</param>
+    /// <param name="thickness">Int of expansion thickness</param>
+    /// <returns>List of Vector2Int expanded positions</returns>
     public static List<Vector2Int> ExpandPositions(List<Vector2Int> tiles, int thickness)
     {
         List<Vector2Int> allPositions = new List<Vector2Int>(tiles);
@@ -103,13 +130,5 @@ public class Tunnel
             temp.Clear();
         }
         return allPositions;
-    }
-
-    public static void OutputList(List<Vector2Int> list)
-    {
-        string outputMessage = "Tunnel Vec List: ";
-        foreach (Vector2Int vec in list)
-            outputMessage += vec.ToString() + ", ";
-        Debug.Log(outputMessage);
     }
 }

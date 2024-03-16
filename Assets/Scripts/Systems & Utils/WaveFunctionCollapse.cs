@@ -4,13 +4,12 @@ using UnityEngine;
 
 public class WaveFunctionCollapse : MonoBehaviour
 {
-    // Tweaks
     [Header("Tweaking Variables")]
     public bool frame_by_frame;
     public int frames_per_update;
     public bool loop_generating;
     public bool output_stats;
-    // Trackers
+
     [Header("Trackers")]
     public MapInfo cur_output;
     private bool generating;
@@ -346,9 +345,6 @@ public class WaveFunctionCollapse : MonoBehaviour
         return 0;
     }
 
-    public bool Looping()
-    {
-        return generating && (frame_by_frame || loop_generating);
-    }
+    public bool Looping() => generating && (frame_by_frame || loop_generating);
     #endregion
 }

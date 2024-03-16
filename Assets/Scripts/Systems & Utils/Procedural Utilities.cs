@@ -91,6 +91,19 @@ public static class PCGUtilities
         return threshold_levels;
     }
 
+    /// <summary>
+    /// Feather off float array levels based on crop values
+    /// </summary>
+    /// <param name="input_levels">2D float arry of input map</param>
+    /// <param name="start_point">Vector2Int of crop start position (bottom left)</param>
+    /// <param name="end_point">Vector2Int of crop end position (top right)</param>
+    /// <param name="border_scale">Int of border scale (how far to feather)</param>
+    /// <param name="top_feather">Bool if needing to feather top edge</param>
+    /// <param name="right_feather">Bool if needing to feather right edge</param>
+    /// <param name="bottom_feather">Bool if needing to feather bottom edge</param>
+    /// <param name="left_feather">Bool if needing to feather left edge</param>
+    /// <param name="root_falloff">Bool if feathering falls of non linearly</param>
+    /// <returns>2D float array of feathered output</returns>
     public static float[,] FeatherLevels(float[,] input_levels, Vector2Int start_point, Vector2Int end_point, int border_scale, bool top_feather, bool right_feather, bool bottom_feather, bool left_feather, bool root_falloff)
     {
         float[,] new_levels = input_levels;
