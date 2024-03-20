@@ -22794,11 +22794,23 @@ MonoBehaviour:
   - id: 29
     tile: {fileID: 11400000, guid: a932cf37439335342a31398bd6f9765c, type: 2}
   - id: 30
-    tile: {fileID: 11400000, guid: e4ccf21f6cf946a4a948749223c01d66, type: 2}
+    tile: {fileID: 11400000, guid: bea32622dd7fc7147ba103764ab0f33c, type: 2}
   - id: 31
-    tile: {fileID: 11400000, guid: e4ccf21f6cf946a4a948749223c01d66, type: 2}
+    tile: {fileID: 11400000, guid: e9c2f742ff7678b44bcff48a85c75a97, type: 2}
   - id: 32
     tile: {fileID: 11400000, guid: 8efc7af504e907f469f1922abf2671e7, type: 2}
+  - id: 33
+    tile: {fileID: 11400000, guid: ec9a6a29e1ac74c44bd5ce674b058fc4, type: 2}
+  - id: 34
+    tile: {fileID: 11400000, guid: 6061afa9cec6b6041b156b8f0bc27c8b, type: 2}
+  - id: 35
+    tile: {fileID: 11400000, guid: 284d65ca5596c4e42968c25f4b56648c, type: 2}
+  - id: 36
+    tile: {fileID: 11400000, guid: 90e75cdbd3ba7024fbe4683b86be0769, type: 2}
+  - id: 37
+    tile: {fileID: 11400000, guid: 4e0c1e3144cb27642abb616f24de2763, type: 2}
+  - id: 38
+    tile: {fileID: 11400000, guid: 8581377145a2f1a43b00a914a14c80ad, type: 2}
   tiles_per_step: 10000
   biome_wall_mult: {r: 0.16981131, g: 0.16981131, b: 0.16981131, a: 1}
 --- !u!212 &2003897262

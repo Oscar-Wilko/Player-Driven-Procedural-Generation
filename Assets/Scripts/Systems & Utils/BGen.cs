@@ -79,8 +79,6 @@ public class BGen
         // Below Surface and out cave
         else if (layers.layer_large_clump[pos.x, pos.y])
             return TileID.HardSand;
-        else if (layers.layer_small_clump[pos.x, pos.y])
-            return TileID.BurriedItem;
         else
             return TileID.Sand;
     }

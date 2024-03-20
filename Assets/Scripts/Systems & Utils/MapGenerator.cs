@@ -74,7 +74,7 @@ public class MapGenerator : MonoBehaviour
 
         // Declare Variables
         float t = Time.realtimeSinceStartup;
-        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0; float t_wat = 0;
+        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0; float t_wat = 0; float t_str = 0;
         generating = true;
         TileInfo tiles = new TileInfo(0, 0);
 
@@ -178,21 +178,27 @@ public class MapGenerator : MonoBehaviour
             }
         }
         t_con = Time.realtimeSinceStartup - t_pre;
+        t_pre = Time.realtimeSinceStartup;
+
+        // Structure Generation
+
+        tiles.map = StructurePass(tiles.map, b_map, layers);
+
+        t_str = Time.realtimeSinceStartup - t_pre;
+
         // Finalise process
         progress.SetVisible(false);
         cur_output = tiles;
         ScrambleSeeds();
         if (!frame_by_frame && output_stats)
             Debug.Log($"It took {Time.realtimeSinceStartup - t} seconds to generate map from biome map.\n" +
-                $"Expanding map took {t_exp} seconds. Making layers took {t_lay} seconds (Of which water was {t_wat} seconds). Converting map took {t_con} seconds.");
+                $"Expanding map took {t_exp} seconds. Making layers took {t_lay} seconds (Of which water was {t_wat} seconds). " +
+                $"Converting map took {t_con} seconds. Structures took {t_str} seconds.");
 
         // Repeat if looping enabled
         if (loop_generating)
         {
             generating = false;
-            yield return new WaitForEndOfFrame();
-            yield return new WaitForEndOfFrame();
-            yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
             StartCoroutine(GenerateMap(info));
         }
@@ -201,6 +207,98 @@ public class MapGenerator : MonoBehaviour
             generating = false;
         }
         yield break;
+    }
+
+    private TileID[] StructurePass(TileID[] t_map, Biome[,] b_map, ProceduralLayers layers)
+    {
+        // ------- TRESURE --------
+        System.Random rng = new System.Random(3137812);
+        // Get Possible Generation Positions
+        List<int> possiblePositions = new List<int>();
+        Dictionary<int, int> xDepths = new Dictionary<int, int>();
+        for (int x = 1; x < b_map.GetLength(0)-1; x++)
+        {
+            int depth = rng.Next(4,10); // MAKE RANDOM BY LIMITS
+            int surf = (int)layers.surface_height[x];
+            if (surf - depth < 0)
+                continue;
+            // If any of the 5 tiles are cave tiles then skip
+            if (layers.layer_cave[x, surf] ||
+                layers.layer_cave[x, surf - depth] ||
+                layers.layer_cave[x + 1, surf - depth] ||
+                layers.layer_cave[x - 1, surf - depth] ||
+                layers.layer_cave[x, surf - depth + 1] ||
+                layers.layer_cave[x, surf - depth - 1])
+                continue;
+            possiblePositions.Add(x);
+            xDepths.Add(x, depth);
+        }
+        possiblePositions = possiblePositions.OrderBy(x => rng.Next(0,100) * 0.01f).ToList();
+        int maxCountTreasure = Mathf.Min(rng.Next(50,100), possiblePositions.Count);
+        // Generate Tresure
+        for(int i = 0; i < maxCountTreasure; i ++) // MAKE RANDOM BY LIMITS
+        {
+            int surf = (int)layers.surface_height[possiblePositions[i]];
+            int depth = xDepths[possiblePositions[i]];
+            t_map[possiblePositions[i] + surf * b_map.GetLength(0)] = TileID.Mud;
+            t_map[possiblePositions[i] + (surf - depth) * b_map.GetLength(0)] = TileID.BurriedItem;
+            if (t_map[possiblePositions[i] + 1 + (surf - depth) * b_map.GetLength(0)] != TileID.BurriedItem)
+                t_map[possiblePositions[i] + 1 + (surf - depth) * b_map.GetLength(0)] = TileID.Mud;
+            if (t_map[possiblePositions[i] - 1 + (surf - depth) * b_map.GetLength(0)] != TileID.BurriedItem)
+                t_map[possiblePositions[i] - 1 + (surf - depth) * b_map.GetLength(0)] = TileID.Mud;
+            if (t_map[possiblePositions[i] + (surf - depth + 1) * b_map.GetLength(0)] != TileID.BurriedItem)
+                t_map[possiblePositions[i] + (surf - depth + 1) * b_map.GetLength(0)] = TileID.Mud;
+            if (t_map[possiblePositions[i] + (surf - depth - 1) * b_map.GetLength(0)] != TileID.BurriedItem)
+                t_map[possiblePositions[i] + (surf - depth - 1) * b_map.GetLength(0)] = TileID.Mud;
+        }
+
+        // ------- CRYSTAL CLUSTER --------
+        // Get Possible Generation Positions
+        List<Vector2Int> possiblePositionsCrystal = new List<Vector2Int>();
+        Dictionary<Vector2Int, int> clusterRadius = new Dictionary<Vector2Int, int>();
+        int radius = rng.Next(10,20);
+        for (int x = 0; x < (b_map.GetLength(0) - radius); x++)
+        {
+            for (int y = 0; y < (int)layers.surface_height[x] - radius; y++)
+            {
+                if (x < radius || y < radius)
+                    continue;
+                if (b_map[x, y] != Biome.Rocky && b_map[x, y] != Biome.SharpRocky)
+                    continue;
+                if (rng.Next(0, 1000) > 1)
+                    continue;
+                possiblePositionsCrystal.Add(new Vector2Int(x, y));
+                clusterRadius.Add(new Vector2Int(x, y), radius);
+                radius = rng.Next(10, 20);
+            }
+        }
+        possiblePositionsCrystal = possiblePositionsCrystal.OrderBy(x => (rng.Next(0,100)*0.01f)).ToList();
+        int maxCountCrystal = Mathf.Min(rng.Next(10, 20), possiblePositionsCrystal.Count);
+        // Generate Clusters
+        for (int i = 0; i < maxCountCrystal; i++)
+        {
+            Vector2Int pos = possiblePositionsCrystal[i];
+            int[,] noise = Noise.GenerateVoronoi(new Vector2Int(1 + clusterRadius[pos] * 2, 1 + clusterRadius[pos] * 2), 20, 156341360);
+            for (int x = pos.x - clusterRadius[pos]; x < pos.x + clusterRadius[pos]; x ++)
+            {
+                for (int y = pos.y - clusterRadius[pos]; y < pos.y + clusterRadius[pos]; y++)
+                {
+                    if ((Vector2Int.Distance(pos, new Vector2Int(x, y)) > clusterRadius[pos])
+                        || layers.layer_cave[x,y])
+                        continue;
+                    switch (noise[x - pos.x + clusterRadius[pos], y - pos.y + clusterRadius[pos]]%6)
+                    {
+                        case 0: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal01;break;
+                        case 1: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal02;break;
+                        case 2: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal03;break;
+                        case 3: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal04;break;
+                        case 4: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal05;break;
+                        case 5: t_map[x + y * b_map.GetLength(0)] = TileID.Crystal06;break;
+                    }
+                }
+            }
+        }
+        return t_map;
     }
 
     /// <summary>
@@ -570,7 +668,7 @@ public class MapGenerator : MonoBehaviour
     }
     #endregion
     #region Quick Functions
-    public bool Looping() => generating && (frame_by_frame || loop_generating);
+    public bool Looping() => frame_by_frame || loop_generating;
     public bool ShowVisual() => !generating || frame_by_frame;
     #endregion
     #region UI

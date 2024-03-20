@@ -53,7 +53,13 @@ public enum TileID
     Wall = 29,
     Stalagtite = 30,
     Stalagmite = 31,
-    Lava = 32
+    Lava = 32,
+    Crystal01 = 33,
+    Crystal02 = 34,
+    Crystal03 = 35,
+    Crystal04 = 36,
+    Crystal05 = 37,
+    Crystal06 = 38,
 }
 public enum Direction
 {
