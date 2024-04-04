@@ -15,12 +15,10 @@ public class DrawCanvas : MonoBehaviour
 
     [Header("Tweak Variables")]
     public float reference_scaling;
-    public float texture_pixels_per_unit;
     public Vector2Int texture_size;
     public BiomePixel[] biome_palette;
 
     [Header("Trackers")]
-    public bool active;
     public BiomePixel selected_pixel;
     private Biome[] current_map;
 
@@ -28,21 +26,19 @@ public class DrawCanvas : MonoBehaviour
     public UnityEvent<int> SizeChangedX;
     public UnityEvent<int> SizeChangedY;
 
-    // Consts
+    [Header("Constants")]
     private Vector2Int[] fill_directions = { new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(-1,0), new Vector2Int(0,-1) };
 
     public void Awake()
     {
         GenerateSprite();
         GeneratePalette();
-        selected_pixel = biome_palette[0];
+        if (biome_palette.Length > 0)
+            selected_pixel = biome_palette[0];
     }
 
     private void Update()
     {
-        if (!active)
-            return;
-
         if (Input.GetMouseButton(0))
             DrawAttempt(selected_pixel);
         else if (Input.GetMouseButtonDown(1))
@@ -157,10 +153,9 @@ public class DrawCanvas : MonoBehaviour
         Color target_colour = pixels[index];
 
         // Generate queue of current map, new spots and temporary spots
-        Queue<Vector2Int> current_spots = new Queue<Vector2Int>(), new_spots = new Queue<Vector2Int>(), temp_spots = new Queue<Vector2Int>();
+        Queue<Vector2Int> new_spots = new Queue<Vector2Int>(), temp_spots = new Queue<Vector2Int>();
         HashSet<Vector2Int> hash_set = new HashSet<Vector2Int>() { m_grid };
         new_spots.Enqueue(m_grid);
-        current_spots.Enqueue(m_grid);
         // Repeat until there are no more spots to check
         do
         {
@@ -183,13 +178,13 @@ public class DrawCanvas : MonoBehaviour
                     if (t_col != target_colour) continue;
                     if (hash_set.Contains(target_vec)) continue;
                     temp_spots.Enqueue(target_vec);
-                    current_spots.Enqueue(target_vec);
                     hash_set.Add(target_vec);
                 }
             }
             // Transfer temporary spots onto new spots
             new_spots.Clear();
-            foreach (Vector2Int spot in temp_spots) new_spots.Enqueue(spot);
+            foreach (Vector2Int spot in temp_spots) 
+                new_spots.Enqueue(spot);
             temp_spots.Clear();
         } while (new_spots.Count != 0);
 
@@ -210,6 +205,8 @@ public class DrawCanvas : MonoBehaviour
     /// <returns>BiomePixel of pixel data</returns>
     private BiomePixel PixelFromBiome(Biome biome)
     {
+        if (biome_palette.Length == 0)
+            return new BiomePixel();
         foreach(BiomePixel pixel in biome_palette) 
             if (pixel.biome == biome) 
                 return pixel;
@@ -297,11 +294,16 @@ public class DrawCanvas : MonoBehaviour
     /// <returns>Float of pixels per unit</returns>
     private float PPU()
     {
-        float x_ratio = texture_size.x * (3f / 16);
-        float y_ratio = texture_size.y * (3f / 16);
+        const float texture_ratio = 3f / 16;
+        float x_ratio = texture_size.x * texture_ratio;
+        float y_ratio = texture_size.y * texture_ratio;
         return Mathf.Max(x_ratio, y_ratio);
     }
 
+    /// <summary>
+    /// Crop existing texture and map to new bounds size
+    /// </summary>
+    /// <param name="new_size">Vector2Int of new bounds size</param>
     private void CropTextureSize(Vector2Int new_size)
     {
         Biome[] new_map = new Biome[new_size.x * new_size.y];
@@ -313,21 +315,16 @@ public class DrawCanvas : MonoBehaviour
             {
                 if (y >= texture_size.y)
                     continue;
-                if (x + y * texture_size.x >= current_map.Length)
-                    Debug.Log(x + y * texture_size.x);
                 new_map[x + y * new_size.x] = current_map[x + y * texture_size.x];
             }
         }
         texture_size = new_size;
         current_map = new_map;
 
-        // Get Texture of current raw image
+        // Generate texture with new pixel map
         Texture2D base_texture = new Texture2D(new_size.x, new_size.y);
         base_texture.filterMode = FilterMode.Point;
-        Color[] pixels = MapToColours(new_map);
-
-        // Update sprite to new pixels
-        base_texture.SetPixels(pixels);
+        base_texture.SetPixels(MapToColours(new_map));
         base_texture.Apply();
 
         sprite.sprite = Sprite.Create(base_texture,
@@ -434,8 +431,8 @@ public class DrawCanvas : MonoBehaviour
     }
     #endregion
     #region Quick Functions
-    public void SetPalettePixel(BiomePixel pixel) { selected_pixel = pixel; }
-    public Biome[] BiomeMap() { return current_map; }
+    public void SetPalettePixel(BiomePixel pixel) => selected_pixel = pixel;
+    public Biome[] BiomeMap() => current_map;
     public void Reset() => GenerateSprite();
     public void ChangeSizeX(int new_size) => CropTextureSize(new Vector2Int(new_size, texture_size.y));
     public void ChangeSizeY(int new_size) => CropTextureSize(new Vector2Int(texture_size.x, new_size));

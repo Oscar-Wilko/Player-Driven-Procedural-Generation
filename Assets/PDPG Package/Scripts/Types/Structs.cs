@@ -151,4 +151,18 @@ public struct TunnelVariables
     [Range(0,1)] public float maxRatio;
     [Range(1, 8)] public int thickness;
 }
+
+[System.Serializable]
+public struct Layers
+{
+    public int width;
+    public int height;
+    public bool[] layer_cave_without;
+    public bool[] layer_cave_with;
+    public bool[] layer_large_clump;
+    public bool[] layer_small_clump;
+    public bool[] layer_dots;
+    public bool[] layer_water_before;
+    public bool[] layer_water_after;
+}
 #endregion

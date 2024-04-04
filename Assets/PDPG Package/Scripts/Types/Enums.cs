@@ -107,3 +107,15 @@ public enum TunnelVariable
     MaxRatio,
     Thickness
 }
+
+public enum Layer
+{
+    FullGen,
+    CaveWith,
+    CaveWithout,
+    LargeClump,
+    SmallClump,
+    Dots,
+    WaterBefore,
+    WaterAfter
+}

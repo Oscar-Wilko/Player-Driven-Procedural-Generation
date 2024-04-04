@@ -1,9 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.U2D;
 
 public static class PCGUtilities
 {
+    public static bool[] ConvertTo1D(bool[,] input)
+    {
+        bool[] arr = new bool[input.Length];
+        for(int x = 0; x < input.GetLength(0); x ++)
+            for (int y = 0; y < input.GetLength(1); y++)
+                arr[x + y * input.GetLength(0)] = input[x, y];
+        return arr;
+    }
+
     /// <summary>
     /// Return a 2D boolean array filtering an input 2D boolean array by limiting the size of holes
     /// </summary>

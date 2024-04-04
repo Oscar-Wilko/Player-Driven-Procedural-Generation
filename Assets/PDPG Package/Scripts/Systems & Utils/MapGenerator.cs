@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Events;
 
 public class MapGenerator : MonoBehaviour
 {
@@ -47,6 +46,7 @@ public class MapGenerator : MonoBehaviour
 
     [Header("Tracking Values")]
     private TileInfo cur_output = new TileInfo(0,0);
+    private Layers cur_layers = new Layers();
     private bool generating = false;
 
     private void Awake()
@@ -68,14 +68,16 @@ public class MapGenerator : MonoBehaviour
     {
         if (generating)
             yield break;
+        generating = true;
 
         progress.SetProgressAmount(0.0f, "", "Starting Up");
+        yield return new WaitForEndOfFrame();
 
         // Declare Variables
         float t = Time.realtimeSinceStartup;
         float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0; float t_wat = 0; float t_str = 0;
-        generating = true;
         TileInfo tiles = new TileInfo(0, 0);
+        Layers map_layers = new Layers();
 
         // Expand biome array with transitions
         t_pre = Time.realtimeSinceStartup;
@@ -95,6 +97,8 @@ public class MapGenerator : MonoBehaviour
         tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
         tiles.width = b_map.GetLength(0);
         tiles.height = b_map.GetLength(1);
+        map_layers.width = b_map.GetLength(0);
+        map_layers.height = b_map.GetLength(1);
 
         ProceduralLayers layers = new ProceduralLayers();
         Vector2Int size = new Vector2Int(b_map.GetLength(0), b_map.GetLength(1));
@@ -113,10 +117,12 @@ public class MapGenerator : MonoBehaviour
         float[,] caveWeight = Noise.Generate2DLevels(size, properties_cave);
         caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
             new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y) - 16), 16, true, false, false, false, true);
+        map_layers.layer_cave_without = PCGUtilities.ConvertTo1D(PCGUtilities.ThresholdPass(caveWeight, properties_cave.threshold));
         caveWeight = TunnelPass(caveWeight, layers.surface_height);
         caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
             new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, false, true, true, true, true);
         layers.layer_cave = PCGUtilities.ThresholdPass(caveWeight, properties_cave.threshold);
+        map_layers.layer_cave_with = PCGUtilities.ConvertTo1D(layers.layer_cave);
         // --------------------
 
         progress.SetProgressAmount(0.3f, "Cave Layer", "Large Clump Layer");
@@ -125,6 +131,7 @@ public class MapGenerator : MonoBehaviour
         // -----LARGE CLUMP LAYER-----
         float[,] largeClumpWeight = Noise.Generate2DLevels(size, properties_l_clump);
         layers.layer_large_clump = PCGUtilities.ThresholdPass(largeClumpWeight, properties_l_clump.threshold);
+        map_layers.layer_large_clump = PCGUtilities.ConvertTo1D(layers.layer_large_clump);
         // ---------------------------
 
         progress.SetProgressAmount(0.4f, "Large Clump Layer", "Small Clump Layer");
@@ -133,6 +140,7 @@ public class MapGenerator : MonoBehaviour
         // -----SMALL CLUMP LAYER-----
         float[,] smallClumpWeight = Noise.Generate2DLevels(size, properties_s_clump);
         layers.layer_small_clump = PCGUtilities.ThresholdPass(smallClumpWeight, properties_s_clump.threshold);
+        map_layers.layer_small_clump = PCGUtilities.ConvertTo1D(layers.layer_small_clump);
         // ---------------------------
 
         progress.SetProgressAmount(0.5f, "Small Clump Layer", "Dots Layer");
@@ -141,6 +149,7 @@ public class MapGenerator : MonoBehaviour
         // -----DOTS LAYER-----
         float[,] dotsWeight = Noise.Generate2DLevels(size, properties_dots);
         layers.layer_dots = PCGUtilities.ThresholdPass(dotsWeight, properties_dots.threshold);
+        map_layers.layer_dots = PCGUtilities.ConvertTo1D(layers.layer_dots);
         // --------------------
 
         progress.SetProgressAmount(0.6f, "Dots Layer", "Water Layer");
@@ -150,8 +159,9 @@ public class MapGenerator : MonoBehaviour
         t_lay += Time.realtimeSinceStartup - t_pre;
         t_pre = Time.realtimeSinceStartup;
         float[,] waterWeight = Noise.Generate2DLevels(size, properties_water);
-        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold),
-            layers.layer_cave, layers.surface_height);
+        map_layers.layer_water_before = PCGUtilities.ConvertTo1D(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold));
+        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold),layers.layer_cave, layers.surface_height);
+        map_layers.layer_water_after = PCGUtilities.ConvertTo1D(layers.layer_water);
         t_wat += Time.realtimeSinceStartup - t_pre;
         // --------------------
 
@@ -164,7 +174,7 @@ public class MapGenerator : MonoBehaviour
             // Gradually update progress bar
             if (x % 64 == 0)
             {
-                progress.SetProgressAmount(0.7f + (float)x / b_map.GetLength(0) * 0.2f, $"Tile Conversion {x * 100/b_map.GetLength(0)}%", "Structure Generation");
+                progress.SetProgressAmount(0.7f + (float)x / b_map.GetLength(0) * 0.1f, $"Tile Conversion {x * 100/b_map.GetLength(0)}%", "Structure Generation");
                 yield return new WaitForEndOfFrame();
             }
             for (int y = 0; y < b_map.GetLength(1); y++)
@@ -174,10 +184,11 @@ public class MapGenerator : MonoBehaviour
             }
         }
         t_con = Time.realtimeSinceStartup - t_pre;
+        progress.SetProgressAmount(0.8f, "Converting Biomes To Tiles", "Structure Generation");
+        yield return new WaitForEndOfFrame();
         t_pre = Time.realtimeSinceStartup;
 
         // Structure Generation
-
         tiles.map = StructurePass(tiles.map, b_map, layers);
 
         t_str = Time.realtimeSinceStartup - t_pre;
@@ -187,6 +198,7 @@ public class MapGenerator : MonoBehaviour
         // Finalise process
         progress.SetVisible(false);
         cur_output = tiles;
+        cur_layers = map_layers;
         ScrambleSeeds();
         if (output_stats)
             Debug.Log($"It took {Time.realtimeSinceStartup - t} seconds to generate map from biome map.\n" +
@@ -205,6 +217,94 @@ public class MapGenerator : MonoBehaviour
             generating = false;
         }
         yield break;
+    }
+
+    /// <summary>
+    /// Generate a map from a given MapInfo input [PURELY FOR A RESULT, DOES NOT INVOLVE ANY COROUTINE]
+    /// </summary>
+    /// <param name="info">MapInfo input information about biome map</param>
+    /// <returns>TileInfo of generated map</returns>
+    public TileInfo GenerateMapResult(MapInfo info)
+    {
+        // Declare Variables
+        float t = Time.realtimeSinceStartup;
+        float t_pre; float t_exp = 0; float t_con = 0; float t_lay = 0; float t_wat = 0; float t_str = 0;
+        TileInfo tiles = new TileInfo(0, 0);
+
+        // Expand biome array with transitions
+        t_pre = Time.realtimeSinceStartup;
+        Biome[,] b_map = ExpandMap(info);
+        Biome[] biome_map_array = new Biome[b_map.GetLength(0) * b_map.GetLength(1)];
+        for (int x = 0; x < b_map.GetLength(0); x++)
+            for (int y = 0; y < b_map.GetLength(1); y++)
+                biome_map_array[x + y * b_map.GetLength(0)] = b_map[x, y];
+        tiles.biome_map = biome_map_array;
+        t_exp = Time.realtimeSinceStartup - t_pre;
+
+        // Convert biome array to map
+        t_pre = Time.realtimeSinceStartup;
+        tiles.map = new TileID[b_map.GetLength(0) * b_map.GetLength(1)];
+        tiles.width = b_map.GetLength(0);
+        tiles.height = b_map.GetLength(1);
+
+        ProceduralLayers layers = new ProceduralLayers();
+        Vector2Int size = new Vector2Int(b_map.GetLength(0), b_map.GetLength(1));
+
+        // -----SURFACE LAYER-----
+        layers.surface_height = Noise.Generate1DLevels(size.x, properties_surface);
+        for (int i = 0; i < size.x; i++)
+            layers.surface_height[i] = ((max_perc_height - min_perc_height) * 0.01f) * size.y
+                * layers.surface_height[i] + (min_perc_height * 0.01f) * size.y;
+        // -----CAVE LAYER-----
+        float[,] caveWeight = Noise.Generate2DLevels(size, properties_cave);
+        caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y) - 16), 16, true, false, false, false, true);
+        caveWeight = TunnelPass(caveWeight, layers.surface_height);
+        caveWeight = PCGUtilities.FeatherLevels(caveWeight, new Vector2Int(0, 0),
+            new Vector2Int(size.x, (int)(max_perc_height * 0.01f * size.y)), 16, false, true, true, true, true);
+        layers.layer_cave = PCGUtilities.ThresholdPass(caveWeight, properties_cave.threshold);
+        // -----LARGE CLUMP LAYER-----
+        float[,] largeClumpWeight = Noise.Generate2DLevels(size, properties_l_clump);
+        layers.layer_large_clump = PCGUtilities.ThresholdPass(largeClumpWeight, properties_l_clump.threshold);
+        // -----SMALL CLUMP LAYER-----
+        float[,] smallClumpWeight = Noise.Generate2DLevels(size, properties_s_clump);
+        layers.layer_small_clump = PCGUtilities.ThresholdPass(smallClumpWeight, properties_s_clump.threshold);
+        // -----DOTS LAYER-----
+        float[,] dotsWeight = Noise.Generate2DLevels(size, properties_dots);
+        layers.layer_dots = PCGUtilities.ThresholdPass(dotsWeight, properties_dots.threshold);
+        // -----WATER LAYER-----
+        t_lay += Time.realtimeSinceStartup - t_pre;
+        t_pre = Time.realtimeSinceStartup;
+        float[,] waterWeight = Noise.Generate2DLevels(size, properties_water);
+        layers.layer_water = SettleWater(PCGUtilities.ThresholdPass(waterWeight, properties_water.threshold),
+            layers.layer_cave, layers.surface_height);
+        t_wat += Time.realtimeSinceStartup - t_pre;
+        // --------------------
+
+        t_lay += Time.realtimeSinceStartup - t_pre;
+        t_pre = Time.realtimeSinceStartup;
+        for (int x = 0; x < b_map.GetLength(0); x++)
+        {
+            for (int y = 0; y < b_map.GetLength(1); y++)
+            {
+                // Convert every tile to TileID based on layer input
+                tiles.map[x + y * tiles.width] = BiomeToTile(b_map[x, y], new Vector2Int(x, y), layers);
+            }
+        }
+        t_con = Time.realtimeSinceStartup - t_pre;
+        t_pre = Time.realtimeSinceStartup;
+
+        // Structure Generation
+        tiles.map = StructurePass(tiles.map, b_map, layers);
+
+        t_str = Time.realtimeSinceStartup - t_pre;
+        ScrambleSeeds();
+        if (output_stats)
+            Debug.Log($"It took {Time.realtimeSinceStartup - t} seconds to generate map from biome map.\n" +
+                $"Expanding map took {t_exp} seconds. Making layers took {t_lay} seconds (Of which water was {t_wat} seconds). " +
+                $"Converting map took {t_con} seconds. Structures took {t_str} seconds.");
+
+        return tiles;
     }
 
     private TileID[] StructurePass(TileID[] t_map, Biome[,] b_map, ProceduralLayers layers)
@@ -281,7 +381,7 @@ public class MapGenerator : MonoBehaviour
             if (voronoiOrWorley)
                 noisei = Noise.GenerateVoronoi(new Vector2Int(1 + clusterRadius[pos] * 2, 1 + clusterRadius[pos] * 2), 20, rng.Next(100000, 100000000));
             else
-                noisef = Noise.GenerateWorley(new Vector2Int(1 + clusterRadius[pos] * 2, 1 + clusterRadius[pos] * 2), 20, rng.Next(100000, 100000000), 0, clusterRadius[pos]*0.5f);
+                noisef = Noise.GenerateWorley(new Vector2Int(1 + clusterRadius[pos] * 2, 1 + clusterRadius[pos] * 2), 20, rng.Next(100000, 100000000), 1, clusterRadius[pos]*0.5f);
             for (int x = pos.x - clusterRadius[pos]; x < pos.x + clusterRadius[pos]; x ++)
             {
                 for (int y = pos.y - clusterRadius[pos]; y < pos.y + clusterRadius[pos]; y++)
@@ -420,9 +520,9 @@ public class MapGenerator : MonoBehaviour
     {
         Vector2Int size = new Vector2Int(water_map.GetLength(0), water_map.GetLength(1));
         bool[,] w_map = new bool[size.x, size.y];
-        for (int x = 0; x < size.x; x++)
+        for (int y = 0; y < size.y; y++)
         {
-            for (int y = 0; y < size.y; y++)
+            for (int x = size.x-1; x >= 0; x--)
             {
                 // Go to next tile if either: not a water tile, not an open cave tile, not below surface level
                 if (!water_map[x, y] || !cave_layer[x, y] || y > (int)surface_layer[x])
@@ -440,7 +540,7 @@ public class MapGenerator : MonoBehaviour
                     {
                         curShift.y -= 1;
                         hitLeft = false;
-                        moving = true; continue;
+                        moving = true;
                     }
                     // If haven't hit a left tile yet
                     else if (!hitLeft)
@@ -449,23 +549,50 @@ public class MapGenerator : MonoBehaviour
                         if (w_map[x + curShift.x - 1, y + curShift.y] || !cave_layer[x + curShift.x - 1, y + curShift.y])
                         {
                             hitLeft = true;
-                            moving = true; continue;
+                            moving = true;
                         }
                         // Otherwise move left and continue shifting
                         else
                         {
                             curShift.x -= 1;
-                            moving = true; continue;
+                            moving = true;
                         }
+                    }
+                    // Diagonal left (covers some extra miss cases)
+                    else if (!w_map[x + curShift.x - 1, y + curShift.y - 1] && cave_layer[x + curShift.x - 1, y + curShift.y - 1])
+                    {
+                        curShift.x -= 1;
+                        curShift.y -= 1;
+                        moving = true;
                     }
                     // Otherwise, shift to the right if there is no water or cave tile
                     else if (!w_map[x + curShift.x + 1, y + curShift.y] && cave_layer[x + curShift.x + 1, y + curShift.y])
                     {
                         curShift.x += 1;
-                        moving = true; continue;
+                        moving = true;
                     }
                 }
                 w_map[x + curShift.x, y + curShift.y] = true;
+            }
+        }
+        // Line checks to fill irregular water
+        bool fillCheck = false;
+        for (int y = 0; y < size.y; y++)
+        {
+            for (int x = size.x - 1; x >= 0; x--)
+            {
+                if (!cave_layer[x,y])
+                {
+                    fillCheck = false;
+                }
+                else if (w_map[x, y])
+                {
+                    fillCheck = true;
+                }
+                else if (fillCheck)
+                {
+                    w_map[x, y] = true;
+                }
             }
         }
         return w_map;
@@ -693,7 +820,9 @@ public class MapGenerator : MonoBehaviour
     public bool Looping() => loop_generating;
     public bool ShowVisual() => !generating;
     public TileInfo Output() => cur_output;
+    public Layers GetLayers() => cur_layers;
     public void LoadTiles(TileInfo info) => cur_output = info;
+    public void LoadLaayers(Layers info) => cur_layers = info;
     #endregion
     #region UI
     public void UpdateBiomeSize(int new_size) => biome_size = new_size;

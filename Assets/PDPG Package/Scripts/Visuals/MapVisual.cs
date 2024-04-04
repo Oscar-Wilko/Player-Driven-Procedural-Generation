@@ -9,26 +9,31 @@ public class MapVisual : MonoBehaviour
     [Header("References")]
     public WaveFunctionCollapse wfc;
     public MapGenerator map_gen;
-    private SpriteRenderer sprite;
+    public RectTransform layers;
+    public SpriteRenderer primary_sprite;
+    public SpriteRenderer secondary_sprite;
     public List<TileDictionaryInstance> tile_dict_list;
     Dictionary<TileID, Tile> tile_dict = new Dictionary<TileID, Tile>();
 
     [Header("Tweaking Values")]
-    public int tiles_per_step;
     public Color biome_wall_mult;
 
     [Header("Tracking Values")]
     public bool output_info;
-    private TileInfo prev_map = new TileInfo(0,0);
     private bool generating = false;
     private bool new_gen = false;
     private Dictionary<Biome, Color> biome_dict;
+    private Layer active_layer = Layer.FullGen;
 
     private void Awake()
     {
-        sprite = GetComponent<SpriteRenderer>();
         GenerateDictionary();
-        biome_dict = FindObjectOfType<DrawCanvas>().BiomeDict();        
+        biome_dict = FindObjectOfType<DrawCanvas>().BiomeDict(); 
+        foreach(LayerViewerInstance instance in layers.GetComponentsInChildren<LayerViewerInstance>())
+        {
+            instance.Init(this);
+            instance.SetState(active_layer);
+        }
     }
 
     /// <summary>
@@ -55,15 +60,11 @@ public class MapVisual : MonoBehaviour
             new_gen = false;
         generating = true;
         float t = Time.realtimeSinceStartup;
-        prev_map.map = new TileID[map.width * map.height];
-        for (int i = 0; i < map.map.Length; i++)
-            prev_map.map[i] = map.map[i];
-        prev_map.width = map.width;
-        prev_map.height = map.height;
         
-        sprite.sprite = Sprite.Create(MapToTexture(map),
+        primary_sprite.sprite = Sprite.Create(MapToTexture(map),
             new Rect(0, 0, map.width, map.height),
             new Vector2(0.5f, 0.5f), PPU(map));
+        SetLayer(active_layer);
 
         if (output_info)
             Debug.Log("It took " + (Time.realtimeSinceStartup - t) + " seconds to display the tilemap.");
@@ -77,6 +78,11 @@ public class MapVisual : MonoBehaviour
     private float PPU(TileInfo map)
     {
         return Mathf.Max(map.width, map.height) * (0.0035f);
+    }
+
+    private float PPU(int width, int height)
+    {
+        return Mathf.Max(width,height) * (0.0035f);
     }
 
     /// <summary>
@@ -96,6 +102,31 @@ public class MapVisual : MonoBehaviour
                 pixels[i] = BiomeCol(map.biome_map[i]);
             else
                 pixels[i] = tile_dict[map.map[i]].color;
+        }
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
+    }
+
+    /// <summary>
+    /// Convert tile map into texture
+    /// </summary>
+    /// <param name="map">TileInfo of map</param>
+    /// <returns>Texture2D of converted texture</returns>
+    private Texture2D LayerToTexture(Layers layers, bool[] chosen_layer)
+    {
+        Vector2Int size = new Vector2Int(layers.width, layers.height);
+        Texture2D texture = new Texture2D(size.x,size.y);
+        texture.filterMode = FilterMode.Point;
+        Color[] pixels = new Color[size.x * size.y];
+        for (int i = 0; i < size.x * size.y; i++)
+        {
+            if (chosen_layer[i])
+                pixels[i] = Color.white;
+            else
+                pixels[i] = Color.black;
+
+            pixels[i].a = 0.5f;
         }
         texture.SetPixels(pixels);
         texture.Apply();
@@ -134,6 +165,53 @@ public class MapVisual : MonoBehaviour
         StartCoroutine(map_gen.GenerateMap(wfc.cur_output));
     }
 
+    public void SetLayer(Layer layer)
+    {
+        Layers all_layers = map_gen.GetLayers();
+        active_layer = layer;
+        foreach (LayerViewerInstance instance in layers.GetComponentsInChildren<LayerViewerInstance>())
+        {
+            instance.SetState(layer);
+        }
+        secondary_sprite.color = new Color(1, 1, 1, layer == Layer.FullGen ? 0 : 1);
+        bool[] chosen_layer;
+        switch (layer)
+        {
+            case Layer.FullGen:
+                return;
+            case Layer.CaveWith:
+                chosen_layer = all_layers.layer_cave_with;
+                break;
+            case Layer.CaveWithout:
+                chosen_layer = all_layers.layer_cave_without;
+                break;
+            case Layer.LargeClump:
+                chosen_layer = all_layers.layer_large_clump;
+                break;
+            case Layer.SmallClump:
+                chosen_layer = all_layers.layer_small_clump;
+                break;
+            case Layer.Dots:
+                chosen_layer = all_layers.layer_dots;
+                break;
+            case Layer.WaterBefore:
+                chosen_layer = all_layers.layer_water_before;
+                break;
+            case Layer.WaterAfter:
+                chosen_layer = all_layers.layer_water_after;
+                break;
+            default:
+                return;
+        }
+        if (chosen_layer == null)
+            return;
+        if (chosen_layer.Length == 0)
+            return;
+        secondary_sprite.sprite = Sprite.Create(LayerToTexture(all_layers, chosen_layer),
+            new Rect(0, 0, all_layers.width, all_layers.height),
+            new Vector2(0.5f, 0.5f), PPU(all_layers.width,all_layers.height));
+    }
+
     /// <summary>
     /// UI reference to load map
     /// </summary>
@@ -144,6 +222,7 @@ public class MapVisual : MonoBehaviour
             return;
         new_gen = true;
         map_gen.LoadTiles(data.tiles);
+        map_gen.LoadLaayers(data.layers);
     }
 
     /// <summary>
@@ -153,6 +232,6 @@ public class MapVisual : MonoBehaviour
     {
         if (wfc.cur_output.width <= 0 || wfc.cur_output.height <= 0)
             return;
-        SaveSystem.SaveTileInfo(map_gen.Output(), "large_map");
+        SaveSystem.SaveTileInfo(map_gen.Output(), map_gen.GetLayers(), "large_map");
     }
 }

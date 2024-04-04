@@ -6,20 +6,17 @@ public class WFCVisual : MonoBehaviour
 {
     [Header("References")]
     public WaveFunctionCollapse wfc;
-    private SpriteRenderer sprite;
     public DrawCanvas canvas;
+    private SpriteRenderer sprite;
 
     [Header("Tweaking Variables")]
     public Vector2Int size;
-
-    [Header("Rulesets")]
-    public Ruleset default_ruleset;
-    public Ruleset test_ruleset;
 
     [Header("Events")]
     public UnityEvent<int> SizeChangedX;
     public UnityEvent<int> SizeChangedY;
 
+    // Consts and Trackers
     private bool new_gen = false;
     private Vector2Int[] fill_directions = { new Vector2Int(1, 0), new Vector2Int(0, 1), new Vector2Int(-1, 0), new Vector2Int(0, -1) };
 
@@ -30,19 +27,21 @@ public class WFCVisual : MonoBehaviour
 
     public void Update()
     {
-        // Valid Output
-        if (Input.GetMouseButton(0))
-            DrawAttempt(canvas.selected_pixel);
-        else if (Input.GetMouseButtonDown(1))
-            FillAttempt(canvas.selected_pixel);
-
-        if (ValidMap() && new_gen)
+        if (ValidMap())
         {
-            sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
-                new Rect(0, 0, wfc.cur_output.width, wfc.cur_output.height),
-                new Vector2(0.5f, 0.5f), PPU());
-            if (!wfc.Looping())
-                new_gen = false;
+            if (Input.GetMouseButton(0))
+                DrawAttempt(canvas.selected_pixel);
+            else if (Input.GetMouseButtonDown(1))
+                FillAttempt(canvas.selected_pixel);
+
+            if (new_gen)
+            {
+                sprite.sprite = Sprite.Create(canvas.MapToTexture(wfc.cur_output),
+                    new Rect(0, 0, wfc.cur_output.width, wfc.cur_output.height),
+                    new Vector2(0.5f, 0.5f), PPU());
+                if (!wfc.Looping())
+                    new_gen = false;
+            }
         }
     }
 
@@ -58,7 +57,6 @@ public class WFCVisual : MonoBehaviour
         }
         new_gen = true;
         wfc.GenerateWFC(canvas.BiomeMap(), canvas.texture_size, size);
-        test_ruleset = WaveFunctionCollapse.GenerateRuleset(canvas.BiomeMap(), canvas.texture_size, false);
     }
     #region Calculations
     /// <summary>
@@ -208,10 +206,9 @@ public class WFCVisual : MonoBehaviour
         Color target_colour = pixels[index];
 
         // Generate queue of current map, new spots and temporary spots
-        Queue<Vector2Int> current_spots = new Queue<Vector2Int>(), new_spots = new Queue<Vector2Int>(), temp_spots = new Queue<Vector2Int>();
+        Queue<Vector2Int> new_spots = new Queue<Vector2Int>(), temp_spots = new Queue<Vector2Int>();
         HashSet<Vector2Int> hash_set = new HashSet<Vector2Int>() { m_grid };
         new_spots.Enqueue(m_grid);
-        current_spots.Enqueue(m_grid);
         // Repeat until there are no more spots to check
         do
         {
@@ -234,13 +231,13 @@ public class WFCVisual : MonoBehaviour
                     if (t_col != target_colour) continue;
                     if (hash_set.Contains(target_vec)) continue;
                     temp_spots.Enqueue(target_vec);
-                    current_spots.Enqueue(target_vec);
                     hash_set.Add(target_vec);
                 }
             }
             // Transfer temporary spots onto new spots
             new_spots.Clear();
-            foreach (Vector2Int spot in temp_spots) new_spots.Enqueue(spot);
+            foreach (Vector2Int spot in temp_spots) 
+                new_spots.Enqueue(spot);
             temp_spots.Clear();
         } while (new_spots.Count != 0);
 

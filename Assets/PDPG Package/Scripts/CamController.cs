@@ -76,7 +76,7 @@ public class CamController : MonoBehaviour
         cam.orthographicSize = 5;
         can_move = state == 2;
         // Update external components
-        draw_canvas.active = state == 0;
+        draw_canvas.enabled = state == 0;
         wfc_canvas.enabled = state == 1;
         canvas_visual.enabled = state != 2;
         wfc_visual.enabled = state != 0;

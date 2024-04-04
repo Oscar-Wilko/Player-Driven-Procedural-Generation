@@ -19,7 +19,6 @@ public static class Noise
     /// <returns>2D float array of noise values</returns>
     public static float[,] Generate2DLevels(Vector2Int size, int octaves, int seed, float persistance, float lacunarity, Vector2 scale, Vector2 offset)
     {
-        float time = Time.realtimeSinceStartup;
         float[,] map_levels = new float[size.x, size.y];
 
         System.Random rng = new System.Random(seed);
@@ -71,7 +70,7 @@ public static class Noise
         for (int x = 0; x < size.x; x++) 
             for (int y = 0; y < size.y; y++) 
                 map_levels[x, y] = Mathf.InverseLerp(min_value, max_value, map_levels[x, y]);
-        //Debug.Log($"It took {Time.realtimeSinceStartup - time} seconds to generate the 2D Noise Map.");
+
         return map_levels;
     }
 

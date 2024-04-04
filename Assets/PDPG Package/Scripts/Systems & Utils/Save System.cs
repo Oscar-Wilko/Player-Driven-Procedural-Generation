@@ -15,9 +15,11 @@ public class SavedImage
 public class SavedTiles
 {
     public TileInfo tiles;
-    public SavedTiles(TileInfo n_info)
+    public Layers layers;
+    public SavedTiles(TileInfo n_info, Layers n_layers)
     {
         tiles = n_info;
+        layers = n_layers;
     }
 }
 
@@ -61,11 +63,12 @@ public static class SaveSystem
     /// <summary>
     /// Save tile information with file name
     /// </summary>
-    /// <param name="info">TileID[,] of 2D tile array</param>
+    /// <param name="info">TileInfo of tilemap information</param>
+    /// <param name="layer">Layers of layer information</param>
     /// <param name="file_name">String of filename to save with</param>
-    public static void SaveTileInfo(TileInfo info, string file_name)
+    public static void SaveTileInfo(TileInfo info, Layers layer, string file_name)
     {
-        SaveTileInfo(new SavedTiles(info), file_name);
+        SaveTileInfo(new SavedTiles(info, layer), file_name);
     }
     #endregion
     #region Loading

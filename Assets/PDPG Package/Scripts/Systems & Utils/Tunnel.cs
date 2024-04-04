@@ -51,9 +51,9 @@ public class Tunnel
 
         if (dir == Direction.Up) 
             tunnelTiles = Mirror(tunnelTiles);
-        if (dir == Direction.Left) 
+        else if (dir == Direction.Left) 
             tunnelTiles = FlipX(tunnelTiles);
-        if (dir == Direction.Down) 
+        else if (dir == Direction.Down) 
             tunnelTiles = FlipY(Mirror(tunnelTiles));
 
         tunnelTiles = ExpandPositions(tunnelTiles, vars.thickness);
