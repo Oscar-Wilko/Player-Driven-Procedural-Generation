@@ -222,7 +222,7 @@ public class MapVisual : MonoBehaviour
             return;
         new_gen = true;
         map_gen.LoadTiles(data.tiles);
-        map_gen.LoadLaayers(data.layers);
+        map_gen.LoadLayers(data.layers);
     }
 
     /// <summary>

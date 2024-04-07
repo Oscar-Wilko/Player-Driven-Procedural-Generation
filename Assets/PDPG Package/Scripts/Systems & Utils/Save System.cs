@@ -34,7 +34,7 @@ public static class SaveSystem
     public static void SaveImageInfo(SavedImage info, string file_name)
     {
         FolderCheck();
-        string saved_data = JsonUtility.ToJson(info, true);
+        string saved_data = JsonUtility.ToJson(info, false);
         File.WriteAllText(GetSaveFileLocation(file_name), saved_data);
     }
 
@@ -56,7 +56,7 @@ public static class SaveSystem
     public static void SaveTileInfo(SavedTiles info, string file_name)
     {
         FolderCheck();
-        string saved_data = JsonUtility.ToJson(info, true);
+        string saved_data = JsonUtility.ToJson(info, false);
         File.WriteAllText(GetSaveFileLocation(file_name), saved_data);
     }
 
