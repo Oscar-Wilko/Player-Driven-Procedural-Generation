@@ -27,7 +27,7 @@ public class ValueEditor : MonoBehaviour
     private bool initCheck = false;
     public bool assign_default_on_startup = false;
 
-    private void Start()
+    private void Awake()
     {
         if (val_slider)
         {

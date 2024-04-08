@@ -22,12 +22,19 @@ public class BGen
         // Surface
         else if (pos.y == (int)layers.surface_height[pos.x])
             return TileID.Grass;
+        else if (pos.y + 1 == (int)layers.surface_height[pos.x] 
+            || pos.y + 2 == (int)layers.surface_height[pos.x]
+            || pos.y + 3 == (int)layers.surface_height[pos.x]
+            || pos.y + 4 == (int)layers.surface_height[pos.x])
+            return TileID.Dirt;
 
         // Below Surface and out cave
         else if (layers.layer_large_clump[pos.x, pos.y])
             return TileID.Gravel;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.LowValOre;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Dirt;
         else
             return TileID.Stone;
     }
@@ -58,6 +65,8 @@ public class BGen
             return TileID.HardIce;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.ColdWater;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.HardIce;
         else
             return TileID.Ice;
     }
@@ -78,6 +87,8 @@ public class BGen
 
         // Below Surface and out cave
         else if (layers.layer_large_clump[pos.x, pos.y])
+            return TileID.HardSand;
+        else if (layers.layer_dots[pos.x, pos.y])
             return TileID.HardSand;
         else
             return TileID.Sand;
@@ -105,6 +116,8 @@ public class BGen
             return TileID.Gravel;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.Mud;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Mud;
         else
             return TileID.Dirt;
     }
@@ -131,6 +144,8 @@ public class BGen
             return TileID.Gravel;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.LowValOre;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Gravel;
         else
             return TileID.Stone;
     }
@@ -165,6 +180,8 @@ public class BGen
             return TileID.Gravel;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.LowValOre;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Gravel;
         else
             return TileID.Stone;
     }
@@ -191,18 +208,10 @@ public class BGen
             return TileID.Magma;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.Obsidian;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Magma;
         else
             return TileID.Molten;
-    }
-
-    public static TileID WaterGeneration(Vector2Int pos, ProceduralLayers layers)
-    {
-        return TileID.Water;
-    }
-
-    public static TileID OceanGeneration(Vector2Int pos, ProceduralLayers layers)
-    {
-        return TileID.Water;
     }
 
     public static TileID JungleGeneration(Vector2Int pos, ProceduralLayers layers)
@@ -237,6 +246,8 @@ public class BGen
             return TileID.Gravel;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.Mud;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Mud;
         else
             return TileID.Stone;
     }
@@ -263,6 +274,8 @@ public class BGen
             return TileID.RadioactiveBlock;
         else if (layers.layer_small_clump[pos.x, pos.y])
             return TileID.HighValOre;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Gravel;
         else
             return TileID.Stone;
     }
@@ -288,7 +301,9 @@ public class BGen
         if (layers.layer_large_clump[pos.x, pos.y])
             return TileID.Dirt;
         else if (layers.layer_small_clump[pos.x, pos.y])
-            return TileID.Water;
+            return TileID.Grass;
+        else if (layers.layer_dots[pos.x, pos.y])
+            return TileID.Grass;
         else
             return TileID.Stone;
     }

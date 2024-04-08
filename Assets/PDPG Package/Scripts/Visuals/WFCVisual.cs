@@ -10,6 +10,7 @@ public class WFCVisual : MonoBehaviour
     private SpriteRenderer sprite;
 
     [Header("Tweaking Variables")]
+    public float scale_factor;
     public Vector2Int size;
 
     [Header("Events")]
@@ -105,10 +106,7 @@ public class WFCVisual : MonoBehaviour
     /// Calculate pixels per unit (PPU)
     /// </summary>
     /// <returns>Float of pixels per unit</returns>
-    private float PPU()
-    {
-        return Mathf.Max(size.x, size.y) * (0.12f);
-    }
+    private float PPU() => Mathf.Max(size.x*0.6f, size.y) * scale_factor;
 
     /// <summary>
     /// Crop the texture to a new size
@@ -116,6 +114,11 @@ public class WFCVisual : MonoBehaviour
     /// <param name="new_size">Vector2Int of new texture size</param>
     private void CropTextureSize(Vector2Int new_size)
     {
+        if (!ValidMap())
+        {
+            size = new_size;
+            return;
+        }
         Biome[] new_map = new Biome[new_size.x * new_size.y];
         for (int x = 0; x < new_size.x; x++)
         {

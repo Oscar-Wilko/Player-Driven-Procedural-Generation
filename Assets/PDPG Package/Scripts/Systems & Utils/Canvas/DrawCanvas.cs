@@ -1,9 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.XR;
-using static UnityEditor.PlayerSettings;
 
 public class DrawCanvas : MonoBehaviour
 {
@@ -11,9 +8,10 @@ public class DrawCanvas : MonoBehaviour
     public RectTransform[] palette_transforms;
     public GameObject palette_instance;
     public Texture2D referenced_texture;
-    private SpriteRenderer sprite;    
+    private SpriteRenderer sprite;
 
-    [Header("Tweak Variables")]
+    [Header("Tweaking Variables")]
+    public float scale_factor;
     public float reference_scaling;
     public Vector2Int texture_size;
     public BiomePixel[] biome_palette;
@@ -292,13 +290,7 @@ public class DrawCanvas : MonoBehaviour
     /// Get texture pixels per unit value
     /// </summary>
     /// <returns>Float of pixels per unit</returns>
-    private float PPU()
-    {
-        const float texture_ratio = 3f / 16;
-        float x_ratio = texture_size.x * texture_ratio;
-        float y_ratio = texture_size.y * texture_ratio;
-        return Mathf.Max(x_ratio, y_ratio);
-    }
+    private float PPU() => Mathf.Max(texture_size.x * 0.6f, texture_size.y) * scale_factor;
 
     /// <summary>
     /// Crop existing texture and map to new bounds size

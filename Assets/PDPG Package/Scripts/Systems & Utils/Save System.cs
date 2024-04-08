@@ -124,7 +124,7 @@ public static class SaveSystem
     /// <returns>String of file location</returns>
     private static string GetSavedDataLocation()
     {
-        return "Assets/SavedData";
+        return "Assets/PDPG Package/SavedData";
     }
 
     /// <summary>

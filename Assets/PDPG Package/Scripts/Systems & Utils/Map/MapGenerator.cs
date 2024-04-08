@@ -19,7 +19,7 @@ public class MapGenerator : MonoBehaviour
     public ValueEditor structure_seed_editor;
     private ProgressBar progress;
 
-    [Header("Tweaking Values")]
+    [Header("Tweaking Variables")]
     public bool loop_generating;
     public bool output_stats;
     private int biome_size;
@@ -630,7 +630,7 @@ public class MapGenerator : MonoBehaviour
 
         // Other Fields
         structure_seed = Mathf.Abs((int)(structure_seed * 9.345f) % 10000000);
-        structure_seed_editor.IntValueChanged.Invoke(structure_seed);
+        structure_seed_editor.UpdateIntValue(structure_seed);
     }
 
     /// <summary>
@@ -721,33 +721,32 @@ public class MapGenerator : MonoBehaviour
             // Get x position relative to 'centre'
             float delta_x = x - (biome_size-1) * 0.5f;
             // Convert to percentage location
-            float delta_x_perc = (Mathf.Abs(delta_x) / ((biome_size-1) * 0.5f)) / (transition_percentage * 0.01f);
+            float delta_x_perc = Mathf.Abs(delta_x) / ((biome_size-1) * 0.5f);
             for (int y = 0; y < biome_size; y++)
             {
                 // Get y position relative to 'centre'
                 float delta_y = y - (biome_size-1) * 0.5f;
                 // Convert to percentage location
-                float delta_y_perc = (Mathf.Abs(delta_y) / ((biome_size-1) * 0.5f)) / (transition_percentage * 0.01f);
+                float delta_y_perc = Mathf.Abs(delta_y) / ((biome_size-1) * 0.5f);
 
                 // Randomize flip chance to produce transition effect
                 bool flip_x = false; bool flip_y = false;
-                if (delta_x_perc <= 1  && delta_y_perc <= 1)
+                if (delta_x_perc <= (transition_percentage * 0.01f) && !lock_x)
                 {
                     float rand = Random.Range(0, 100) * 0.01f;
-                    flip_x = (rand > (0.5f + delta_x_perc * 0.5f) && !lock_x);
-                    rand = Random.Range(0, 100) * 0.01f;
-                    flip_y = rand > (0.5f + delta_y_perc * 0.5f) && !lock_y;
+                    flip_x = rand > (0.5f + (delta_x_perc/(transition_percentage*0.01f)) * 0.5f);
+                }
+                if (delta_y_perc <= (transition_percentage * 0.01f) && !lock_y)
+                {
+                    float rand = Random.Range(0, 100) * 0.01f;
+                    flip_y = rand > (0.5f + (delta_y_perc/(transition_percentage*0.01f)) * 0.5f);
                 }
 
                 // Set biome based on flip checks
-                if (delta_x < 0 && delta_y < 0)
-                    biomes[x, y] = flip_x ? (flip_y ? trc : brc) : (flip_y ? tlc : blc);
-                else if (delta_y < 0)
-                    biomes[x, y] = flip_x ? (flip_y ? tlc : blc) : (flip_y ? trc : brc);
-                else if (delta_x < 0)
-                    biomes[x, y] = flip_x ? (flip_y ? brc : trc) : (flip_y ? blc : tlc);
-                else
-                    biomes[x, y] = flip_x ? (flip_y ? blc : tlc) : (flip_y ? brc : trc);
+                if (delta_x < 0 && delta_y < 0) biomes[x, y] = flip_x ? (flip_y ? trc : brc) : (flip_y ? tlc : blc);
+                else if (delta_y < 0)           biomes[x, y] = flip_x ? (flip_y ? tlc : blc) : (flip_y ? trc : brc);
+                else if (delta_x < 0)           biomes[x, y] = flip_x ? (flip_y ? brc : trc) : (flip_y ? blc : tlc);
+                else                            biomes[x, y] = flip_x ? (flip_y ? blc : tlc) : (flip_y ? brc : trc);
             }
         }
         return biomes;
@@ -812,8 +811,6 @@ public class MapGenerator : MonoBehaviour
             case Biome.Rocky:       return BGen.RockyGeneration(pos, layers);
             case Biome.SharpRocky:  return BGen.SharpRockyGeneration(pos, layers);
             case Biome.Lava:        return BGen.LavaGeneration(pos, layers);
-            case Biome.Water:       return BGen.WaterGeneration(pos, layers);
-            case Biome.Ocean:       return BGen.OceanGeneration(pos, layers);
             case Biome.Jungle:      return BGen.JungleGeneration(pos, layers);
             case Biome.Radioactive: return BGen.RadioactiveGeneration(pos, layers);
             case Biome.Luscious:    return BGen.LushiousGeneration(pos, layers);

@@ -10,11 +10,11 @@ public enum Biome
     Rocky = 5,
     SharpRocky = 6,
     Lava = 7,
-    Water = 8,
-    Ocean = 9,
-    Jungle = 10,
-    Radioactive = 11,
-    Luscious = 12
+    //Water = 8, Removed
+    //Ocean = 9, Removed
+    Jungle = 8,
+    Radioactive = 9,
+    Luscious = 10
 }
 /// <summary>
 /// TileID enum, numbered if IDs get removed
