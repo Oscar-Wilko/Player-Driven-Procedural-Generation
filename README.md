@@ -1,5 +1,4 @@
-Player Driven Procedural Generation:
-- A tool in which the user can make a 2D world to their taste and preferences.
+# **_Player Driven Procedural Generation is a tool in which the user can make a 2D world to their taste and preferences._**
 
 To generate a world, first make a biome map by drawing onto the first canvas where you would like biomes to be layed out and then hit generate. With this biome map you can now generate a full world map. Any steps of the generation that you want to change can be accessed in the value editor UI. For any complex changes such as Octaves, Persitance, and lacunarity, have a look into the wiki.
 
