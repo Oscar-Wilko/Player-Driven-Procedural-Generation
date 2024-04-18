@@ -12,6 +12,7 @@ public class WaveFunctionCollapse : MonoBehaviour
 
     [Header("Trackers")]
     public MapInfo cur_output;
+    public Ruleset cur_rs;
     private bool generating;
 
     #region WFC Generation
@@ -32,6 +33,7 @@ public class WaveFunctionCollapse : MonoBehaviour
         input.biome_map.map = inp_map;
         input.biome_map.width = in_size.x;
         input.biome_map.height = in_size.y;
+        cur_rs = input.ruleset;
         StartCoroutine(GenerateWFC(input));
         return null;
     }
@@ -119,63 +121,6 @@ public class WaveFunctionCollapse : MonoBehaviour
     }
 
     /// <summary>
-    /// Generate biome map with Wave Function Collapse [PURELY FOR A RESULT, DOES NOT INVOLVE ANY COROUTINE]
-    /// </summary>
-    /// <param name="inp">WFCInput of WFC based variables</param>
-    /// <param name="output_stats">Bool if time statistics should be ouputed</param>
-    /// <returns>MapInfo of WFC output</returns>
-    public static MapInfo GenerateWFCResult(WFCInput inp, bool output_stats)
-    {
-        // Time Trackers
-        float t = Time.realtimeSinceStartup;
-        float t_pre, t_col = 0, t_ent = 0, t_upd = 0;
-        // Initialise WFC Output
-        MapInfo wfc = new MapInfo();
-        wfc.map = new Biome[inp.width * inp.height];
-        wfc.width = inp.width;
-        wfc.height = inp.height;
-
-        // Initialise cells with default weighting
-        Cell[] cells = InitCells(inp);
-
-        int max_passes = inp.width * inp.height;
-        int pass = 0;
-        List<Cell> lowest_entropy = new List<Cell>();
-        // Loop until finished collapsing or reaching max passes
-        while (!FinishCheck(cells) && pass < max_passes)
-        {
-            // Find Cell of lowest entropy
-            t_pre = Time.realtimeSinceStartup;
-            Cell low_e = LowestEntropy(cells, lowest_entropy);
-            t_ent += Time.realtimeSinceStartup - t_pre;
-
-            // Collapse Cell
-            t_pre = Time.realtimeSinceStartup;
-            low_e.Collapse(inp);
-            lowest_entropy.Remove(low_e);
-            t_col += Time.realtimeSinceStartup - t_pre;
-
-            // Update neighbouring cells
-            t_pre = Time.realtimeSinceStartup;
-            UpdateNeighbouringCells(cells, low_e, inp, lowest_entropy);
-            t_upd += Time.realtimeSinceStartup - t_pre;
-
-            pass++;
-        }
-
-        // Final update for current output
-        for (int i = 0; i < cells.Length; i++)
-            wfc.map[i] = cells[i].biome;
-
-        if (output_stats)
-            Debug.Log(
-                "It took " + (Time.realtimeSinceStartup - t) + " seconds to generate the WFC biome map.\n" +
-                "Updates took " + t_upd + " seconds. Collapses took " + t_col + " seconds. Entropy took " + t_ent + " seconds.");
-
-        return wfc;
-    }
-
-    /// <summary>
     /// Update cells surrounding a selected cell based on current lowest entropy and WFC input variables
     /// </summary>
     /// <param name="cells">Cell[] of all cells</param>
@@ -254,8 +199,10 @@ public class WaveFunctionCollapse : MonoBehaviour
         // Make Ruleset based off inp_map
         Ruleset set = new Ruleset();
         set.rules = new List<Rules>();
-        set.height = new List<HeightVariance>();
-        set.length = new List<LengthVariance>();
+        set.height = new List<Variance>();
+        set.length = new List<Variance>();
+        set.diagonal_br = new List<Variance>();
+        set.diagonal_tr = new List<Variance>();
 
         int biome_count = System.Enum.GetValues(typeof(Biome)).Length;
         for (int i = 0; i < biome_count; i++)
@@ -269,14 +216,24 @@ public class WaveFunctionCollapse : MonoBehaviour
             _r.down_rule = new Rule(false);
 
             // Height Variance
-            HeightVariance _h = new HeightVariance();
+            Variance _h = new Variance();
             _h.biome = (Biome)i;
-            _h.h_chance = new float[size.y];
+            _h.chance = new float[size.y];
 
             // Length Variance
-            LengthVariance _l = new LengthVariance();
+            Variance _l = new Variance();
             _l.biome = (Biome)i;
-            _l.l_chance = new float[size.x];
+            _l.chance = new float[size.x];
+
+            // Diagonal Variance
+            Variance _dtr = new Variance();
+            _dtr.biome = (Biome)i;
+            _dtr.chance = new float[size.x + size.y];
+
+            // Diagonal Variance
+            Variance _dbr = new Variance();
+            _dbr.biome = (Biome)i;
+            _dbr.chance = new float[size.x + size.y];
 
             // Go Through Each Cell And Calculate Both
             for(int y = 0; y < size.y; y ++)
@@ -286,7 +243,9 @@ public class WaveFunctionCollapse : MonoBehaviour
                 {
                     if (inp_map[x + y * size.x] == (Biome)i)
                     {
-                        _l.l_chance[x]++;
+                        _l.chance[x]++;
+                        _dtr.chance[x + y]++;
+                        _dbr.chance[x + (size.y - y - 1)]++;
                         counter++;
                         if (x > 0)          _r.left_rule.wl[(int)inp_map[(x - 1) + y * size.x]].impact += 1;
                         if (x < size.x - 1) _r.right_rule.wl[(int)inp_map[(x + 1) + y * size.x]].impact += 1;
@@ -294,11 +253,13 @@ public class WaveFunctionCollapse : MonoBehaviour
                         if (y < size.y - 1) _r.up_rule.wl[(int)inp_map[x + (y + 1) * size.x]].impact += 1;
                     }
                 }
-                _h.h_chance[size.y - (y+1)] = counter;
+                _h.chance[size.y - (y+1)] = counter;
             }
             set.rules.Add(_r);
             set.height.Add(_h);
             set.length.Add(_l);
+            set.diagonal_tr.Add(_dtr);
+            set.diagonal_br.Add(_dbr);
         }
 
         if (output_stats)
@@ -327,8 +288,10 @@ public class WaveFunctionCollapse : MonoBehaviour
             cells[i].biomeInvalid = inp.biome_map.map[biomeIndex];
             cells[i].options = init_options;
             cells[i].index = i;
-            cells[i].perc_height = (i / inp.width) / (float)inp.height;
+            cells[i].perc_height = 1 - (i / inp.width) / (float)inp.height;
             cells[i].perc_length = (i % inp.width) / (float)inp.width;
+            cells[i].perc_diag_tr = (indexPos.x + indexPos.y) / (float)(inp.width + inp.height);
+            cells[i].perc_diag_br = (indexPos.x + (inp.height - indexPos.y - 1)) / (float)(inp.width +inp.height);
         }
         return cells;
     }
@@ -377,43 +340,15 @@ public class WaveFunctionCollapse : MonoBehaviour
         return set.rules[0];
     }
 
-    /// <summary>
-    /// Return weights of biome at a height (Y POS)
-    /// </summary>
-    /// <param name="set">Ruleset of all biome rules</param>
-    /// <param name="biome">Biome of biome</param>
-    /// <param name="perc_h">Float of percentage height of cell</param>
-    /// <returns></returns>
-    public static float WeightAtHeight(Ruleset set, Biome biome, float perc_h)
+    public static float WeightAtVariance(List<Variance> variances, Biome biome, float perc)
     {
-        for (int i = 0; i < set.height.Count; i++)
+        for (int i = 0; i < variances.Count; i++)
         {
-            if (set.height[i].biome == biome)
+            if (variances[i].biome == biome)
             {
-                int index = Mathf.FloorToInt((1 - perc_h) * set.height[i].h_chance.Length);
-                index = Mathf.Clamp(index, 0, set.height[i].h_chance.Length - 1);
-                return set.height[i].h_chance[index];
-            }
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// Return weights of biome at a length (X POS)
-    /// </summary>
-    /// <param name="set">Ruleset of all biome rules</param>
-    /// <param name="biome">Biome of biome</param>
-    /// <param name="perc_l">Float of percentage length of cell</param>
-    /// <returns></returns>
-    public static float WeightAtLength(Ruleset set, Biome biome, float perc_l)
-    {
-        for (int i = 0; i < set.length.Count; i++)
-        {
-            if (set.height[i].biome == biome)
-            {
-                int index = Mathf.FloorToInt(perc_l * set.length[i].l_chance.Length);
-                index = Mathf.Clamp(index, 0, set.length[i].l_chance.Length - 1);
-                return set.length[i].l_chance[index];
+                int index = Mathf.FloorToInt(perc * variances[i].chance.Length);
+                index = Mathf.Clamp(index, 0, variances[i].chance.Length - 1);
+                return variances[i].chance[index];
             }
         }
         return 0;

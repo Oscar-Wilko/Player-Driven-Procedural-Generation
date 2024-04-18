@@ -122,13 +122,16 @@ public class WFCVisual : MonoBehaviour
         Biome[] new_map = new Biome[new_size.x * new_size.y];
         for (int x = 0; x < new_size.x; x++)
         {
-            if (x >= size.x)
-                continue;
             for (int y = 0; y < new_size.y; y++)
             {
-                if (y >= size.y)
-                    continue;
-                new_map[x + y * new_size.x] = wfc.cur_output.map[x + y * size.x];
+                if (x >= size.x || y >= size.y)
+                {
+                    new_map[x + y * new_size.x] = Biome.Standard;
+                }
+                else
+                {
+                    new_map[x + y * new_size.x] = wfc.cur_output.map[x + y * size.x];
+                }
             }
         }
         size = new_size;

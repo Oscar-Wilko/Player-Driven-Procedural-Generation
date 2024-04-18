@@ -3034,9 +3034,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   frame_by_frame: 0
-  frames_per_update: 64
+  frames_per_update: 1
   loop_generating: 0
-  output_stats: 0
+  output_stats: 1
   cur_output:
     map: 
     width: 0
@@ -16368,7 +16368,7 @@ MonoBehaviour:
   f_tunnel_field: {fileID: 428941595}
   structure_seed_editor: {fileID: 1549772020}
   loop_generating: 0
-  output_stats: 0
+  output_stats: 1
   properties_surface:
     octaves: 2
     seed: 100000
@@ -29231,7 +29231,7 @@ MonoBehaviour:
   - id: 38
     tile: {fileID: 11400000, guid: 8581377145a2f1a43b00a914a14c80ad, type: 2}
   biome_wall_mult: {r: 0.16981131, g: 0.16981131, b: 0.16981131, a: 1}
-  output_info: 0
+  output_info: 1
 --- !u!212 &2003897262
 SpriteRenderer:
   m_ObjectHideFlags: 0

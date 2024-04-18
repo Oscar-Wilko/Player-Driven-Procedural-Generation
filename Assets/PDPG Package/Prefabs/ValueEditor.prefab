@@ -773,7 +773,7 @@ GameObject:
   - component: {fileID: 1615489797846870089}
   - component: {fileID: 4354726503673444961}
   m_Layer: 5
-  m_Name: TweakField
+  m_Name: ValueEditor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

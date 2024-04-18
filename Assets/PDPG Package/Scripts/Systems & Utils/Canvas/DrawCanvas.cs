@@ -301,13 +301,16 @@ public class DrawCanvas : MonoBehaviour
         Biome[] new_map = new Biome[new_size.x * new_size.y];
         for(int x = 0; x < new_size.x; x++)
         {
-            if (x >= texture_size.x)
-                continue;
             for (int y = 0; y < new_size.y; y++)
             {
-                if (y >= texture_size.y)
-                    continue;
-                new_map[x + y * new_size.x] = current_map[x + y * texture_size.x];
+                if (x >= texture_size.x || y >= texture_size.y)
+                {
+                    new_map[x + y * new_size.x] = Biome.Standard;
+                }
+                else
+                {
+                    new_map[x + y * new_size.x] = current_map[x + y * texture_size.x];
+                }
             }
         }
         texture_size = new_size;

@@ -11,7 +11,9 @@ public class Cell
     public int index;
     public float perc_height;
     public float perc_length;
-    private int maxCheckRange = 12;
+    public float perc_diag_tr;
+    public float perc_diag_br;
+    private int maxCheckRange = 16;
 
     /// <summary>
     /// Collapse self by checking current options with ruleset
@@ -28,8 +30,10 @@ public class Cell
         for (int i = 0; i < options.Count; i++)
         {
             BiomeWeight weight = options[i];
-            weight.impact *= WaveFunctionCollapse.WeightAtHeight(input.ruleset, weight.biome, perc_height);
-            weight.impact *= WaveFunctionCollapse.WeightAtLength(input.ruleset, weight.biome, perc_length);
+            weight.impact *= WaveFunctionCollapse.WeightAtVariance(input.ruleset.height, weight.biome, perc_height);
+            weight.impact *= WaveFunctionCollapse.WeightAtVariance(input.ruleset.length, weight.biome, perc_length);
+            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_br, weight.biome, perc_diag_br),0.2f,2);
+            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_tr, weight.biome, perc_diag_tr),0.2f,2);
             weight.impact *= Mathf.Clamp(1 - (DistFromClosest(input, options[i].biome) / maxCheckRange), 0, 1);
             total_weight += weight.impact;
             if (weight.impact != 0)

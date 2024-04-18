@@ -15,8 +15,10 @@ public struct WFCInput
 public struct Ruleset
 {
     public List<Rules> rules;
-    public List<HeightVariance> height;
-    public List<LengthVariance> length;
+    public List<Variance> height;
+    public List<Variance> length;
+    public List<Variance> diagonal_tr;
+    public List<Variance> diagonal_br;
 }
 
 [System.Serializable]
@@ -58,17 +60,10 @@ public struct BiomeWeight
 }
 
 [System.Serializable]
-public struct HeightVariance
+public struct Variance
 {
     public Biome biome;
-    public float[] h_chance;
-}
-
-[System.Serializable]
-public struct LengthVariance
-{
-    public Biome biome;
-    public float[] l_chance;
+    public float[] chance;
 }
 #endregion
 #region Canvas
