@@ -32,8 +32,8 @@ public class Cell
             BiomeWeight weight = options[i];
             weight.impact *= WaveFunctionCollapse.WeightAtVariance(input.ruleset.height, weight.biome, perc_height);
             weight.impact *= WaveFunctionCollapse.WeightAtVariance(input.ruleset.length, weight.biome, perc_length);
-            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_br, weight.biome, perc_diag_br),0.2f,2);
-            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_tr, weight.biome, perc_diag_tr),0.2f,2);
+            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_br, weight.biome, perc_diag_br),0.05f,5f);
+            weight.impact *= Mathf.Clamp(WaveFunctionCollapse.WeightAtVariance(input.ruleset.diagonal_tr, weight.biome, perc_diag_tr),0.05f,5f);
             weight.impact *= Mathf.Clamp(1 - (DistFromClosest(input, options[i].biome) / maxCheckRange), 0, 1);
             total_weight += weight.impact;
             if (weight.impact != 0)
