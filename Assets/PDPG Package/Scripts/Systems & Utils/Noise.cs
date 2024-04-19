@@ -62,7 +62,6 @@ public static class Noise
                     min_value= noise_height;
                 if (noise_height > max_value) 
                     max_value= noise_height;
-
                 map_levels[x, y] = noise_height;
             }
         }

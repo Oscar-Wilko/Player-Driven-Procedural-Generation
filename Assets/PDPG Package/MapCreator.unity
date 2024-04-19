@@ -3041,6 +3041,12 @@ MonoBehaviour:
     map: 
     width: 0
     height: 0
+  cur_rs:
+    rules: []
+    height: []
+    length: []
+    diagonal_tr: []
+    diagonal_br: []
 --- !u!1 &217882396
 GameObject:
   m_ObjectHideFlags: 0
@@ -28231,6 +28237,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   img: {fileID: 333959312}
+  vars:
+    octaves: 2
+    seed: 9054140
+    persistance: 0.25
+    lacunarity: 2
+    scale: {x: 25, y: 25}
+    offset: {x: 0, y: 0}
+    threshold: 0.4
+  size: 0
 --- !u!1 &1791179455
 GameObject:
   m_ObjectHideFlags: 0

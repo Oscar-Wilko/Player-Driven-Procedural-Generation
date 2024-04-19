@@ -124,7 +124,7 @@ public struct WaveVariables
     public int seed;
     [Range(0.0f, 1.0f)]
     public float persistance;
-    [Range(0.0f, 1.0f)]
+    [Range(0.0f, 5.0f)]
     public float lacunarity;
     public Vector2 scale;
     public Vector2 offset;
