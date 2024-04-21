@@ -16376,34 +16376,34 @@ MonoBehaviour:
   loop_generating: 0
   output_stats: 1
   properties_surface:
-    octaves: 2
+    octaves: 3
     seed: 100000
     persistance: 0.5
-    lacunarity: 0.8
+    lacunarity: 2
     scale: {x: 50, y: 1}
     offset: {x: 0, y: 0}
     threshold: 0
   properties_cave:
-    octaves: 2
+    octaves: 5
     seed: 9054140
     persistance: 0.25
-    lacunarity: 0.8
+    lacunarity: 2
     scale: {x: 25, y: 25}
     offset: {x: 0, y: 0}
     threshold: 0.4
   properties_l_clump:
-    octaves: 4
+    octaves: 3
     seed: 664249
     persistance: 0.4
-    lacunarity: 0.8
+    lacunarity: 2
     scale: {x: 20, y: 20}
     offset: {x: 0, y: 0}
     threshold: 0.3
   properties_s_clump:
-    octaves: 5
+    octaves: 2
     seed: 3568153
     persistance: 0.5
-    lacunarity: 0.8
+    lacunarity: 2
     scale: {x: 10, y: 10}
     offset: {x: 0, y: 0}
     threshold: 0.3
@@ -16411,15 +16411,15 @@ MonoBehaviour:
     octaves: 4
     seed: 6721019
     persistance: 0.5
-    lacunarity: 0.8
+    lacunarity: 3
     scale: {x: 3, y: 3}
     offset: {x: 0, y: 0}
     threshold: 0.2
   properties_water:
-    octaves: 4
+    octaves: 1
     seed: 6819689
     persistance: 0.5
-    lacunarity: 0.8
+    lacunarity: 1
     scale: {x: 10, y: 10}
     offset: {x: 0, y: 0}
     threshold: 0.25

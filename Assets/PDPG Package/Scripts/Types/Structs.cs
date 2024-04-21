@@ -118,7 +118,7 @@ public struct ProceduralLayers
 [System.Serializable]
 public struct WaveVariables
 {
-    [Range(0, 50)]
+    [Range(1, 50)]
     public int octaves;
     [Range(100000, 10000000)]
     public int seed;
